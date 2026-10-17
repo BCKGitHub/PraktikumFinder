@@ -14,7 +14,9 @@ You need:
 * the PraktikumFinder code: on GitHub click **Code → Download ZIP** and unzip it, or `git clone` it,
 * an email address that the BA can contact you on if they have questions about your requests.
 
-Read the **terms of use of the BA job search** on arbeitsagentur.de, plus the API description at <https://jobsuche.api.bund.dev/>. Only continue if your use is covered. If in doubt, ask the BA.
+Read the **terms of use of the BA job search** on arbeitsagentur.de, plus the API description at <https://jobsuche.api.bund.dev/>. The interface is not an official open-data offer: the BA keeps the rights to the listings, and its terms restrict automated access and reuse. Only continue if your use is covered; if in doubt, ask the BA in writing before you run it regularly or publish listings.
+
+**Turn off your browser's page translation** in the admin area. Otherwise the browser can translate the settings (for example `"wo"` into `"where"`), and the app can't read them.
 
 ## 2. Install and start the app
 
@@ -64,7 +66,7 @@ If the line starts with **Fehler**:
 
 | Message | What it means | What to do |
 |---|---|---|
-| `antwortet mit 403` or `401` | The BA refused the request. | Wait and try again later. If it keeps happening, the BA may have changed access; check the API description. |
+| `antwortet mit 403` or `401` | The BA refused the request. | Make sure you have the latest version of the app (the BA retired its old interface in 2026, which also gave 403). If it keeps happening, the BA may have changed access again; check the API description. |
 | `robots.txt verbietet …` | The site asks bots not to fetch this address. | The app respects that. Don't work around it. |
 | `Netzwerkfehler` / `nicht erreichbar` | Your computer couldn't reach the site. | Check your internet connection or firewall. |
 

@@ -132,6 +132,7 @@ class JsonLdJobPostingScraper(Scraper):
     label = "Karriereseiten mit JobPosting-Daten (schema.org)"
     description = "Liest strukturierte Stellenangebote (JSON-LD) von freigegebenen Arbeitgeber-Seiten."
     config_help = '{"urls": ["https://arbeitgeber.example/karriere/praktikum"], "keywords": ["schülerpraktikum", "praktikum"]}'
+    config_keys = frozenset({"urls", "keywords"})
 
     def fetch(self, config: dict) -> list[ScrapedListing]:
         keywords = [k.lower() for k in config.get("keywords", DEFAULT_KEYWORDS)]

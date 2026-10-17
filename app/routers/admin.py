@@ -932,6 +932,12 @@ def source_save(request: Request, source_id: str = Form(""), scraper: str = Form
         assert isinstance(cfg, dict)
     except Exception:
         return redirect("/admin/quellen", "Konfiguration ist kein gültiges JSON-Objekt.", request)
+    allowed = REGISTRY[scraper].config_keys
+    unknown = sorted(k for k in cfg if allowed and k not in allowed)
+    if unknown:
+        # Typical cause: the browser's page translation turned "wo" into "where" before saving.
+        return redirect("/admin/quellen", f"Unbekannte Einstellung(en) {', '.join(unknown)}. Erlaubt: {', '.join(sorted(allowed))}. "
+                        "Tipp: Seitenübersetzung im Browser ausschalten.", request)
     src = db.get(ScrapeSource, int(source_id)) if source_id.isdigit() else ScrapeSource()
     src.scraper, src.name, src.config = scraper, name.strip()[:200], cfg
     src.enabled, src.auto_publish_unverified = enabled == "1", auto_publish_unverified == "1"

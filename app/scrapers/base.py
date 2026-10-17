@@ -151,6 +151,8 @@ class Scraper:
     label: str = ""
     description: str = ""
     config_help: str = ""
+    # Configuration keys this scraper understands; others are rejected when an admin saves a source.
+    config_keys: frozenset[str] = frozenset()
 
     def __init__(self, fetcher: PoliteFetcher) -> None:
         self.fetcher = fetcher

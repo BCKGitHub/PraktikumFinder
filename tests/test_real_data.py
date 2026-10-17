@@ -137,3 +137,19 @@ def test_broken_link_queue_and_detect_button(admin_client, db_session):
     opp = db_session.get(Opportunity, opp.id)
     assert (opp.min_age, opp.min_grade, opp.max_grade) == (15, 9, 10)
     assert "bitte prüfen" in opp.data_quality_notes
+
+
+def test_source_config_rejects_translated_keys(admin_client, db_session):
+    from app.models import ScrapeSource
+
+    src = db_session.scalar(select(ScrapeSource).where(ScrapeSource.scraper == "ba_jobsuche"))
+    before = dict(src.config)
+    c = admin_client
+    r = c.post("/admin/quellen", data={"csrf_token": c.csrf, "source_id": str(src.id), "scraper": "ba_jobsuche",
+                                       "name": src.name, "config": '{"what": "student internship", "where": "Frankfurt am Main"}'},
+               follow_redirects=True)
+    assert "Unbekannte Einstellung" in r.text
+    db_session.expire_all()
+    assert db_session.get(ScrapeSource, src.id).config == before
+    page = c.get("/admin/quellen").text
+    assert 'translate="no"' in page and "Neue Quelle anlegen" in page

@@ -1,0 +1,14 @@
+{
+  "ergebnisliste": [
+    {"referenznummer": "12336-a26f539j0448996-S", "stellenangebotsTitel": "Schülerpraktikum in der Tischlerei (m/w/d)",
+     "hauptberuf": "Tischler/in", "firma": "Holzwerkstatt Beispiel GmbH",
+     "stellenlokationen": [{"adresse": {"plz": "65183", "ort": "Wiesbaden", "region": "HESSEN", "land": "DEUTSCHLAND"},
+                            "koordinaten": {"lat": 50.082, "lon": 8.24}}],
+     "veroeffentlichungszeitraum": {"von": "2026-10-02"}, "homeofficemoeglich": false},
+    {"referenznummer": "12336-b11111111111-S", "stellenangebotsTitel": "Praktikum Marketing (Studium)",
+     "hauptberuf": "Marketingfachmann/-frau", "firma": "Agentur Beispiel AG",
+     "stellenlokationen": [{"adresse": {"ort": "Mainz", "region": "RHEINLAND-PFALZ", "land": "DEUTSCHLAND"}}]}
+  ],
+  "maxErgebnisse": 2,
+  "facetten": {}
+}

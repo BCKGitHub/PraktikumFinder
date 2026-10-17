@@ -8,6 +8,10 @@ terms of use before running this in production.
 Search parameters used: was (keywords), wo (place), umkreis (km),
 angebotsart (34 = Praktikum/Trainee), page, size.
 
+The search uses API version 6 (the older /pc/v4/jobs answers 403 since its
+retirement in 2026). Version 6 renamed most fields (ergebnisliste, referenznummer,
+stellenangebotsTitel, firma, stellenlokationen ...); parse_item reads both shapes.
+
 Search results carry no description text. With "fetch_details" (default on) the
 scraper also asks the job-details endpoint for each kept listing, so age, grade
 and dates can be read from the ad text. That endpoint is less well documented;
@@ -18,12 +22,13 @@ from __future__ import annotations
 import base64
 import logging
 from datetime import date
+from urllib.parse import quote
 
 from .base import RobotsDisallowed, ScrapedListing, ScrapeError, Scraper
 
 log = logging.getLogger(__name__)
 
-API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
+API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs"
 DETAIL_URL = "https://www.arbeitsagentur.de/jobsuche/jobdetail/{refnr}"
 DETAILS_API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobdetails/{key}"
 PUBLIC_CLIENT_ID = "jobboerse-jobsuche"
@@ -49,6 +54,7 @@ class BAJobsucheScraper(Scraper):
     description = "Sucht Praktikumsangebote in der Jobbörse der Bundesagentur für Arbeit."
     config_help = ('{"was": "Schülerpraktikum", "wo": "Darmstadt", "umkreis": 15, "angebotsart": 34, '
                    '"max_pages": 3, "fetch_details": true, "required_keywords": ["schüler", "schulpraktikum"]}')
+    config_keys = frozenset({"was", "wo", "umkreis", "angebotsart", "max_pages", "size", "fetch_details", "required_keywords"})
 
     def fetch(self, config: dict) -> list[ScrapedListing]:
         required = [k.lower() for k in config.get("required_keywords", DEFAULT_REQUIRED_KEYWORDS)]
@@ -67,7 +73,8 @@ class BAJobsucheScraper(Scraper):
             r = self.fetcher.get(API_URL, params=params, headers={"X-API-Key": PUBLIC_CLIENT_ID,
                                                                   "Accept": "application/json"})
             data = r.json()
-            items = data.get("stellenangebote") or []
+            # v6: "ergebnisliste" (missing entirely when there are no hits); v4: "stellenangebote"
+            items = data.get("ergebnisliste") or data.get("stellenangebote") or []
             for item in items:
                 listing = self.parse_item(item)
                 if listing is None:
@@ -77,7 +84,7 @@ class BAJobsucheScraper(Scraper):
                     continue
                 out.append(listing)
             total = int(data.get("maxErgebnisse") or 0)
-            if not items or page * size >= total:
+            if not items or len(items) < size or (total and page * size >= total):
                 break
         if config.get("fetch_details", True):
             self.add_details(out)
@@ -106,27 +113,40 @@ class BAJobsucheScraper(Scraper):
 
     @staticmethod
     def parse_item(item: dict) -> ScrapedListing | None:
-        refnr = item.get("refnr")
-        title = (item.get("titel") or item.get("beruf") or "").strip()
-        employer = (item.get("arbeitgeber") or "").strip()
+        refnr = item.get("referenznummer") or item.get("refnr")
+        title = (item.get("stellenangebotsTitel") or item.get("titel") or item.get("hauptberuf") or item.get("beruf") or "").strip()
+        employer = (item.get("firma") or item.get("arbeitgeber") or "").strip()
         if not refnr or not title or not employer:
             return None
-        ort = item.get("arbeitsort") or {}
-        coords = ort.get("koordinaten") or {}
+        ort = _location(item)
+        address = ort.get("adresse") if isinstance(ort.get("adresse"), dict) else ort
+        coords = ort.get("koordinaten") or address.get("koordinaten") or {}
+        published = (item.get("veroeffentlichungszeitraum") or {}).get("von") or item.get("aktuelleVeroeffentlichungsdatum")
+        start = (item.get("eintrittszeitraum") or {}).get("von") or item.get("eintrittsdatum")
+        job = item.get("hauptberuf") or item.get("beruf") or ""
         return ScrapedListing(
             external_id=str(refnr),
             title=title[:250],
             employer_name=employer[:200],
             source_label="Bundesagentur für Arbeit – Jobsuche",
-            postcode=(ort.get("plz") or None),
-            city=ort.get("ort"),
-            street=ort.get("strasse"),
-            latitude=coords.get("lat"),
-            longitude=coords.get("lon"),
-            url=item.get("externeUrl") or DETAIL_URL.format(refnr=refnr),
-            published=_date(item.get("aktuelleVeroeffentlichungsdatum")),
-            start_date=_date(item.get("eintrittsdatum")),
-            extra_text=f"{item.get('beruf') or ''}",
-            raw={k: item.get(k) for k in ("refnr", "beruf", "titel", "arbeitgeber", "eintrittsdatum",
-                                         "aktuelleVeroeffentlichungsdatum", "modifikationsTimestamp")},
+            postcode=(address.get("plz") or address.get("postleitzahl") or None),
+            city=address.get("ort"),
+            street=address.get("strasse"),
+            latitude=coords.get("lat", coords.get("breite")),
+            longitude=coords.get("lon", coords.get("laenge")),
+            url=item.get("externeURL") or item.get("externeUrl") or DETAIL_URL.format(refnr=quote(str(refnr), safe="")),
+            published=_date(published),
+            start_date=_date(start),
+            extra_text=str(job),
+            raw={k: item.get(k) for k in ("referenznummer", "refnr", "stellenangebotsTitel", "titel", "hauptberuf", "beruf",
+                                         "firma", "arbeitgeber", "eintrittsdatum", "aktuelleVeroeffentlichungsdatum",
+                                         "veroeffentlichungszeitraum", "modifikationsTimestamp") if k in item},
         )
+
+
+def _location(item: dict) -> dict:
+    """v6: first entry of stellenlokationen (with an adresse inside); v4: arbeitsort."""
+    locations = item.get("stellenlokationen")
+    if isinstance(locations, list) and locations and isinstance(locations[0], dict):
+        return locations[0]
+    return item.get("arbeitsort") or {}
