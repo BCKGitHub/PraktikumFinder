@@ -55,6 +55,7 @@ from ..models import (
 from ..scrapers import REGISTRY, PoliteFetcher
 from ..scrapers.runner import apply_extracted, run_source
 from ..security import (
+    current_admin,
     enforce_rate_limit,
     is_locked,
     login_admin_session,
@@ -116,8 +117,7 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), d
 
 
 def _pending_admin(request: Request, db: Session) -> AdminUser:
-    admin_id = request.session.get("admin_id")
-    admin = db.get(AdminUser, admin_id) if admin_id else None
+    admin = current_admin(request, db, require_mfa=False)
     if admin is None:
         raise HTTPException(303, headers={"Location": "/admin/login"})
     return admin

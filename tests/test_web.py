@@ -303,3 +303,39 @@ def test_status_transition_rules():
     assert can_transition("published", "closed")
     assert not can_transition("rejected", "published")
     assert not can_transition("expired", "closed")
+
+
+def test_old_session_does_not_carry_over_to_a_new_account(admin_client, db_session):
+    """A fresh database can give a new admin the same id; the old browser cookie must not log them in."""
+    from app.models import AdminUser
+    from app.security import hash_password
+
+    assert admin_client.get("/admin", follow_redirects=False).status_code == 200
+    old = db_session.scalar(select(AdminUser).where(AdminUser.email == "admin@example.org"))
+    old_id = old.id
+    db_session.delete(old)
+    db_session.commit()
+    db_session.add(AdminUser(id=old_id, email="fresh@example.org", password_hash=hash_password("another long password")))
+    db_session.commit()
+    assert admin_client.get("/admin", follow_redirects=False).headers["location"] == "/admin/login"
+    # Nor may the old cookie set up two-factor login for the new account.
+    assert admin_client.get("/admin/mfa/einrichten", follow_redirects=False).headers["location"] == "/admin/login"
+
+
+def test_password_change_ends_existing_sessions(admin_client, db_session):
+    from app.models import AdminUser
+    from app.security import hash_password
+
+    admin = db_session.scalar(select(AdminUser).where(AdminUser.email == "admin@example.org"))
+    admin.password_hash = hash_password("a brand new long password")
+    db_session.commit()
+    assert admin_client.get("/admin", follow_redirects=False).status_code == 303
+
+
+def test_admin_without_two_factor_cannot_use_admin_pages(admin_client, db_session):
+    from app.models import AdminUser
+
+    admin = db_session.scalar(select(AdminUser).where(AdminUser.email == "admin@example.org"))
+    admin.totp_enabled = False
+    db_session.commit()
+    assert admin_client.get("/admin", follow_redirects=False).status_code == 303
