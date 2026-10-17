@@ -1,6 +1,7 @@
 """Authentication, CSRF, rate limiting and security headers."""
 from __future__ import annotations
 
+import hashlib
 import secrets
 import threading
 import time
@@ -59,10 +60,18 @@ def totp_uri(secret: str, email: str) -> str:
 ADMIN_SESSION_MAX_AGE = timedelta(hours=8)
 
 
+def _admin_key(admin: AdminUser) -> str:
+    """Ties a session to this exact account: a new account that reuses the id (fresh database) or a
+    password change makes older session cookies invalid."""
+    raw = f"{admin.id}:{admin.email}:{admin.password_hash}".encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
 def login_admin_session(request: Request, admin: AdminUser, mfa_ok: bool) -> None:
     # Rotate the CSRF token on privilege change.
     request.session.clear()
     request.session["admin_id"] = admin.id
+    request.session["admin_key"] = _admin_key(admin)
     request.session["mfa_ok"] = mfa_ok
     request.session["admin_since"] = int(time.time())
     request.session["csrf"] = secrets.token_urlsafe(32)
@@ -77,6 +86,10 @@ def current_admin(request: Request, db: Session, require_mfa: bool = True) -> Ad
         return None
     admin = db.get(AdminUser, admin_id)
     if admin is None or not admin.active:
+        return None
+    if not secrets.compare_digest(str(request.session.get("admin_key", "")), _admin_key(admin)):
+        return None
+    if require_mfa and not admin.totp_enabled:
         return None
     return admin
 
