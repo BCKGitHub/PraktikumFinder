@@ -1,0 +1,12 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<div class="row-between"><h1>Angebote</h1><a class="btn btn-primary" href="/admin/angebote/neu">Neues Angebot</a></div>
+<form method="get" class="filters">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Titel oder Betrieb">
+  <select name="status"><option value="">alle Status</option>{% for k, v in STATUS_LABELS.items() %}<option value="{{ k }}" {% if f.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  <select name="verification"><option value="">alle Prüfstände</option>{% for k, v in VERIFICATION_LABELS.items() %}<option value="{{ k }}" {% if f.verification == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  <select name="source"><option value="">alle Quellen</option>{% for s in sources %}<option {% if f.source == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Filtern</button>
+</form>
+{% include "admin/_opp_table.html" %}
+{% endblock %}

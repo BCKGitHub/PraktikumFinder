@@ -1,0 +1,20 @@
+{
+  "stellenangebote": [
+    {"beruf": "Kaufmann/-frau - Büromanagement", "titel": "Schülerpraktikum im Büro (m/w/d)", "refnr": "10000-1111111111-S",
+     "arbeitsort": {"plz": "60311", "ort": "Frankfurt am Main", "region": "Hessen", "land": "Deutschland", "koordinaten": {"lat": 50.111, "lon": 8.682}},
+     "arbeitgeber": "Beispiel Handels GmbH", "aktuelleVeroeffentlichungsdatum": "2026-10-01", "modifikationsTimestamp": "2026-10-01T10:00:00.000", "eintrittsdatum": "2027-01-18"},
+    {"beruf": "Fachinformatiker/in - Anwendungsentwicklung", "titel": "Praktikum für Schüler*innen – Softwareentwicklung", "refnr": "10000-2222222222-S",
+     "arbeitsort": {"plz": "64283", "ort": "Darmstadt", "region": "Hessen", "land": "Deutschland"},
+     "arbeitgeber": "Code Beispiel AG", "aktuelleVeroeffentlichungsdatum": "2026-09-20", "eintrittsdatum": "2027-02-01"},
+    {"beruf": "Wirtschaftswissenschaftler/in", "titel": "Praktikum Controlling (Studium)", "refnr": "10000-3333333333-S",
+     "arbeitsort": {"plz": "60549", "ort": "Frankfurt am Main"}, "arbeitgeber": "Groß Konzern SE",
+     "aktuelleVeroeffentlichungsdatum": "2026-10-05"},
+    {"beruf": "Kfz-Mechatroniker/in", "titel": "Schnupperpraktikum Kfz-Werkstatt", "refnr": "10000-4444444444-S",
+     "arbeitsort": {"plz": "63067", "ort": "Offenbach am Main", "koordinaten": {"lat": 50.1, "lon": 8.748}},
+     "arbeitgeber": "Werkstatt Beispiel KG", "aktuelleVeroeffentlichungsdatum": "2026-10-10"},
+    {"beruf": "Pflegefachmann/-frau", "titel": "", "refnr": "10000-5555555555-S", "arbeitgeber": "Ohne Titel"}
+  ],
+  "maxErgebnisse": "5",
+  "page": "1",
+  "size": "50"
+}

@@ -1,0 +1,65 @@
+{
+  "_note": "Approximate postcode centroids for the Rhein-Main launch region (hand-entered, accuracy roughly 1-2 km). Replace or extend with an open dataset (e.g. OpenStreetMap/OpenGeoDB-derived PLZ centroids) via: python -m app.cli import-postcodes file.csv",
+  "states": [
+    {"code": "BW", "name": "Baden-Württemberg"}, {"code": "BY", "name": "Bayern"},
+    {"code": "BE", "name": "Berlin"}, {"code": "BB", "name": "Brandenburg"},
+    {"code": "HB", "name": "Bremen"}, {"code": "HH", "name": "Hamburg"},
+    {"code": "HE", "name": "Hessen"}, {"code": "MV", "name": "Mecklenburg-Vorpommern"},
+    {"code": "NI", "name": "Niedersachsen"}, {"code": "NW", "name": "Nordrhein-Westfalen"},
+    {"code": "RP", "name": "Rheinland-Pfalz"}, {"code": "SL", "name": "Saarland"},
+    {"code": "SN", "name": "Sachsen"}, {"code": "ST", "name": "Sachsen-Anhalt"},
+    {"code": "SH", "name": "Schleswig-Holstein"}, {"code": "TH", "name": "Thüringen"}
+  ],
+  "cities": [
+    {"name": "Frankfurt am Main", "state": "HE", "launch": true, "postcodes": [
+      ["60311", 50.1109, 8.6821], ["60313", 50.1155, 8.6842], ["60316", 50.1225, 8.6990],
+      ["60318", 50.1260, 8.6830], ["60322", 50.1260, 8.6680], ["60325", 50.1150, 8.6580],
+      ["60326", 50.1040, 8.6350], ["60385", 50.1290, 8.7140], ["60386", 50.1180, 8.7480],
+      ["60431", 50.1440, 8.6600], ["60433", 50.1580, 8.6620], ["60435", 50.1530, 8.6930],
+      ["60486", 50.1170, 8.6340], ["60487", 50.1250, 8.6420], ["60488", 50.1390, 8.6230],
+      ["60528", 50.0820, 8.6380], ["60549", 50.0500, 8.5700], ["60594", 50.1030, 8.6900],
+      ["60596", 50.0980, 8.6720], ["60598", 50.0900, 8.6850], ["60599", 50.0980, 8.7230],
+      ["65929", 50.1000, 8.5450], ["65933", 50.0960, 8.6000], ["65934", 50.1030, 8.5800]]},
+    {"name": "Offenbach am Main", "state": "HE", "launch": true, "postcodes": [
+      ["63065", 50.1060, 8.7650], ["63067", 50.1000, 8.7480], ["63069", 50.0930, 8.7860],
+      ["63071", 50.0950, 8.7700], ["63073", 50.0780, 8.7870], ["63075", 50.1100, 8.7980]]},
+    {"name": "Darmstadt", "state": "HE", "launch": true, "postcodes": [
+      ["64283", 49.8728, 8.6512], ["64285", 49.8640, 8.6600], ["64287", 49.8700, 8.6800],
+      ["64289", 49.8850, 8.6650], ["64293", 49.8850, 8.6400], ["64295", 49.8550, 8.6400],
+      ["64297", 49.8250, 8.6450]]},
+    {"name": "Mainz", "state": "RP", "launch": true, "postcodes": [
+      ["55116", 49.9990, 8.2730], ["55118", 50.0080, 8.2560], ["55120", 50.0200, 8.2400],
+      ["55122", 49.9930, 8.2450], ["55124", 49.9900, 8.2200], ["55127", 49.9780, 8.2050],
+      ["55128", 49.9700, 8.2350], ["55129", 49.9650, 8.2700], ["55131", 49.9850, 8.2700]]},
+    {"name": "Wiesbaden", "state": "HE", "launch": true, "postcodes": [
+      ["65183", 50.0820, 8.2400], ["65185", 50.0780, 8.2420], ["65187", 50.0700, 8.2400],
+      ["65189", 50.0700, 8.2600], ["65191", 50.0950, 8.2700], ["65193", 50.0950, 8.2300],
+      ["65195", 50.0880, 8.2200], ["65197", 50.0750, 8.2150], ["65199", 50.0620, 8.2050],
+      ["65201", 50.0700, 8.1700], ["65203", 50.0450, 8.2350]]},
+    {"name": "Bad Homburg v. d. Höhe", "state": "HE", "launch": true, "postcodes": [["61348", 50.2270, 8.6180]]},
+    {"name": "Oberursel (Taunus)", "state": "HE", "launch": true, "postcodes": [["61440", 50.2030, 8.5770]]},
+    {"name": "Eschborn", "state": "HE", "launch": true, "postcodes": [["65760", 50.1440, 8.5700]]},
+    {"name": "Bad Vilbel", "state": "HE", "launch": true, "postcodes": [["61118", 50.1790, 8.7360]]},
+    {"name": "Neu-Isenburg", "state": "HE", "launch": true, "postcodes": [["63263", 50.0530, 8.6950]]},
+    {"name": "Dreieich", "state": "HE", "launch": true, "postcodes": [["63303", 50.0200, 8.6950]]},
+    {"name": "Langen (Hessen)", "state": "HE", "launch": true, "postcodes": [["63225", 49.9890, 8.6680]]},
+    {"name": "Hanau", "state": "HE", "launch": true, "postcodes": [["63450", 50.1330, 8.9170]]},
+    {"name": "Rüsselsheim am Main", "state": "HE", "launch": true, "postcodes": [["65428", 49.9930, 8.4120]]},
+    {"name": "Hofheim am Taunus", "state": "HE", "launch": true, "postcodes": [["65719", 50.0900, 8.4480]]},
+    {"name": "Kelsterbach", "state": "HE", "launch": true, "postcodes": [["65451", 50.0620, 8.5300]]},
+    {"name": "Maintal", "state": "HE", "launch": true, "postcodes": [["63477", 50.1450, 8.8350]]},
+    {"name": "Mörfelden-Walldorf", "state": "HE", "launch": true, "postcodes": [["64546", 49.9930, 8.5650]]},
+    {"name": "Friedberg (Hessen)", "state": "HE", "launch": true, "postcodes": [["61169", 50.3350, 8.7550]]}
+  ],
+  "travel_rules": [
+    {"name": "Standard (alle Bundesländer)", "state": null, "reference": "either", "max_travel_minutes": 60,
+     "max_distance_km": null, "approval_required_beyond": true,
+     "note": "Grundeinstellung: Weg von Schule oder Zuhause, bis ca. 60 Minuten. Weiter entfernte Plätze werden angezeigt, aber als „Schule muss zustimmen“ markiert."},
+    {"name": "Hessen", "state": "HE", "reference": "either", "max_travel_minutes": 60,
+     "max_distance_km": null, "approval_required_beyond": true,
+     "note": "Laut Hinweisen des Landes Hessen soll der Praktikumsplatz vom Wohn- oder Schulort zumutbar erreichbar sein, möglichst mit öffentlichen Verkehrsmitteln; über weiter entfernte Plätze entscheidet die Schule. Bitte aktuelle Vorgaben deiner Schule beachten."},
+    {"name": "Rheinland-Pfalz", "state": "RP", "reference": "either", "max_travel_minutes": 60,
+     "max_distance_km": null, "approval_required_beyond": true,
+     "note": "Vorgaben bitte bei deiner Schule erfragen; noch nicht im Detail hinterlegt."}
+  ]
+}

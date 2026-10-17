@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block title %}Bewerbung vorbereiten{% endblock %}
+{% block content %}
+<p><a href="/angebote/{{ opp.id }}">← Zurück zum Angebot</a></p>
+<h1>Bewerbung vorbereiten</h1>
+<p class="lead">{{ opp.title }} · {{ opp.employer.name }}</p>
+<p class="alert alert-info small">Alles auf dieser Seite bleibt in deinem Browser. Wir speichern deinen Namen, deine Schule oder deine Texte nicht. Die Vorlagen erfinden nichts: Was du nicht ausfüllst, erscheint als <span class="missing">[bitte ergänzen: …]</span>.</p>
+
+<nav class="tabs" aria-label="Schritte">
+  <a href="#checkliste">1. Checkliste</a>
+  <a href="#angaben">2. Deine Angaben</a>
+  <a href="#email">3. E-Mail</a>
+  <a href="#anschreiben">4. Anschreiben</a>
+</nav>
+
+<section class="card" id="checkliste">
+  <h2>1. Checkliste</h2>
+  {% set checklist_key = "opp-" ~ opp.id %}
+  {% include "student/_checklist.html" %}
+  <p class="school-warning small"><strong>Denk dran:</strong> Deine Schule muss den Praktikumsplatz bestätigen, und deine Eltern bzw. Erziehungsberechtigten sollten Bescheid wissen und einverstanden sein.</p>
+</section>
+
+<section class="card" id="angaben">
+  <h2>2. Deine Angaben</h2>
+  <p class="hint">Nur ausfüllen, was stimmt. Die Felder werden nicht gesendet.</p>
+  <div class="grid-2" data-apply-form>
+    <label>Vor- und Nachname <input type="text" data-field="name" autocomplete="name"></label>
+    <label>Alter <input type="number" data-field="age" min="10" max="25"></label>
+    <label>Schule <input type="text" data-field="school" placeholder="z. B. Musterschule Frankfurt"></label>
+    <label>Klasse <input type="number" data-field="grade" min="5" max="13"></label>
+    <label>Praktikum von <input type="date" data-field="start"></label>
+    <label>Praktikum bis <input type="date" data-field="end"></label>
+    <label>Bereich <input type="text" data-field="domain" value="{{ templates_json.fixed.domain_default }}"></label>
+    <label>Art des Praktikums
+      <select data-field="practicum_kind">
+        <option value="Schulpraktikum">Pflichtpraktikum der Schule (Schulpraktikum)</option>
+        <option value="freiwilliges Praktikum">Freiwilliges Praktikum</option>
+      </select>
+    </label>
+    <label>E-Mail <input type="email" data-field="email" autocomplete="email"></label>
+    <label>Telefon (optional) <input type="tel" data-field="phone" autocomplete="tel"></label>
+    <label>Ansprechperson beim Betrieb <input type="text" data-field="contact_person" value="{{ templates_json.fixed.contact_person }}" placeholder="z. B. Frau Beispiel"></label>
+    <label>Wohnort (für Ort, Datum) <input type="text" data-field="home_city"></label>
+    <label class="span-2">Warum interessiert dich der Bereich? <span class="muted">(2–3 Sätze, in deinen Worten)</span>
+      <textarea data-field="motivation" rows="3" maxlength="800"></textarea></label>
+    <label class="span-2">Was kannst du gut? <span class="muted">(optional – nur was stimmt)</span>
+      <textarea data-field="strengths" rows="2" maxlength="600"></textarea></label>
+  </div>
+  <button type="button" class="btn btn-primary" data-generate>Entwürfe erstellen</button>
+  <button type="button" class="btn btn-ghost" data-forget-fields>Eingaben löschen</button>
+</section>
+
+<script type="application/json" id="apply-templates">{{ templates_json|tojson }}</script>
+
+<section class="card" id="email">
+  <h2>3. E-Mail an den Betrieb <span class="draft-badge">Entwurf</span></h2>
+  {% if templates_json.fixed.application_email %}<p class="small">An: <strong>{{ templates_json.fixed.application_email }}</strong></p>{% else %}<p class="small">Dieser Betrieb nimmt Bewerbungen über seine Webseite oder ein Formular an – den Text kannst du trotzdem nutzen.</p>{% endif %}
+  <label>Betreff <input type="text" data-output="email_subject"></label>
+  <label>Text <textarea rows="14" data-output="email_body"></textarea></label>
+  <div class="actions" data-output-actions="email">
+    <button type="button" class="btn" data-copy="email" disabled>Kopieren</button>
+    <button type="button" class="btn btn-ghost" data-download-txt="email" disabled>Als .txt speichern</button>
+  </div>
+</section>
+
+<section class="card" id="anschreiben">
+  <h2>4. Anschreiben <span class="draft-badge">Entwurf</span></h2>
+  <textarea rows="24" data-output="cover_letter"></textarea>
+  <div class="actions">
+    <button type="button" class="btn" data-copy="cover" disabled>Kopieren</button>
+    <button type="button" class="btn btn-ghost" data-download-txt="cover" disabled>Als .txt speichern</button>
+    <form method="post" action="/bewerbung/docx" data-docx-form>
+      {{ csrf() }}
+      <input type="hidden" name="title" value="Anschreiben">
+      <input type="hidden" name="body">
+      <input type="hidden" name="confirmed" value="">
+      <button type="submit" class="btn btn-ghost" disabled data-docx-btn>Als Word (.docx)</button>
+    </form>
+  </div>
+  <p class="small muted">Tipp: Für ein PDF öffne die Word-Datei und wähle „Speichern als PDF“.</p>
+</section>
+
+<section class="card confirm-box">
+  <label class="check"><input type="checkbox" data-confirm> Ich habe die Entwürfe gelesen, alle <em>[bitte ergänzen]</em>-Stellen ersetzt und alles stimmt.</label>
+  <p class="hint">Erst danach kannst du kopieren oder herunterladen.</p>
+  <button type="button" class="btn" data-track-add="{{ opp.id }}" data-title="{{ opp.title }}" data-employer="{{ opp.employer.name }}">Zu meinen Bewerbungen hinzufügen</button>
+  <p class="small" data-track-msg role="status" hidden>Hinzugefügt. <a href="/bewerbungen">Zu deinen Bewerbungen</a></p>
+</section>
+{% endblock %}

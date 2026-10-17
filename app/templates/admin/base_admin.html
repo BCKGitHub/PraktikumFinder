@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block body_class %}admin{% endblock %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<div class="admin-layout">
+  <nav class="admin-nav" aria-label="Verwaltung">
+    <a href="/admin">Übersicht</a>
+    <a href="/admin/angebote">Angebote</a>
+    <a href="/admin/pruefung">Prüfung</a>
+    <a href="/admin/einreichungen">Einreichungen</a>
+    <a href="/admin/meldungen">Meldungen</a>
+    <a href="/admin/arbeitgeber">Betriebe</a>
+    <a href="/admin/bereiche">Bereiche</a>
+    <a href="/admin/orte">Orte &amp; Regeln</a>
+    <a href="/admin/quellen">Quellen (Scraper)</a>
+    <a href="/admin/import">Import / Export</a>
+    <a href="/admin/statistik">Statistik</a>
+    <a href="/admin/protokoll">Protokoll</a>
+    <form method="post" action="/admin/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="linklike" type="submit">Abmelden{% if admin %} ({{ admin.email }}){% endif %}</button></form>
+  </nav>
+  <div class="admin-main">
+    {% if flash %}<p class="alert alert-info" role="status">{{ flash }}</p>{% endif %}
+    {% block admin %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

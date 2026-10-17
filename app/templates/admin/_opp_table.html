@@ -1,0 +1,14 @@
+<table class="table">
+  <thead><tr><th>Angebot</th><th>Status</th><th>Prüfung</th><th>Zuletzt geprüft</th><th>Quelle</th></tr></thead>
+  <tbody>
+  {% for o in items %}
+  <tr>
+    <td><a href="/admin/angebote/{{ o.id }}">{{ o.title }}</a><br><span class="small muted">{{ o.employer.name }}{% if o.is_demo %} · Demo{% endif %}</span></td>
+    <td>{{ STATUS_LABELS[o.status] }}</td>
+    <td>{{ VERIFICATION_LABELS.get(o.verification_status, o.verification_status) }}</td>
+    <td>{{ o.last_verified_at|fmt_date if o.last_verified_at else "–" }}</td>
+    <td class="small">{{ o.source }}</td>
+  </tr>
+  {% else %}<tr><td colspan="5">Keine Einträge.</td></tr>{% endfor %}
+  </tbody>
+</table>

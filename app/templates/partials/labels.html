@@ -1,0 +1,14 @@
+{% macro labels(match, with_explanation=false) %}
+<ul class="labels" role="list">
+  {% for l in match.labels %}
+  <li class="label label-{{ l.tone }}" title="{{ l.explanation }}">{{ l.text }}</li>
+  {% endfor %}
+</ul>
+{% if with_explanation %}
+<ul class="label-explanations">
+  {% for l in match.labels %}<li><strong>{{ l.text }}:</strong> {{ l.explanation.split(': ', 1)[-1] }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endmacro %}

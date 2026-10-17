@@ -1,0 +1,75 @@
+<form class="search-form card" method="get" action="/ergebnisse" data-search-form>
+  <fieldset>
+    <legend>Welcher Bereich interessiert dich?</legend>
+    <p class="hint">Du kannst mehrere auswählen.</p>
+    <div class="domain-checks">
+      {% for d in domains %}
+      <div class="domain-check">
+        <label class="check"><input type="checkbox" name="bereich" value="{{ d.slug }}" {% if d.slug in preselected or d.slug in (selected_slugs or []) %}checked{% endif %}> <span aria-hidden="true">{{ d.icon or "" }}</span> {{ d.name }}</label>
+        {% if d.children %}
+        <details class="subdomains" {% if (selected_slugs or [])|select("in", d.children|map(attribute="slug")|list)|list %}open{% endif %}>
+          <summary>genauer wählen</summary>
+          {% for c in d.children if c.active %}
+          <label class="check"><input type="checkbox" name="bereich" value="{{ c.slug }}" {% if c.slug in (selected_slugs or []) %}checked{% endif %}> {{ c.name }}</label>
+          {% endfor %}
+        </details>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset class="grid-2">
+    <legend>Über dich</legend>
+    <label>Alter <input type="number" name="alter" min="10" max="25" inputmode="numeric" value="{{ q.get('alter', '') }}"></label>
+    <label>Klasse <input type="number" name="klasse" min="5" max="13" inputmode="numeric" value="{{ q.get('klasse', '') }}"></label>
+    <label class="span-2">Schulform (optional)
+      <select name="schulform">
+        <option value="">– bitte wählen –</option>
+        {% for s in SCHOOL_TYPES %}<option {% if q.get('schulform') == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="check span-2"><input type="checkbox" name="pflicht" value="1" {% if q.get('pflicht') == '1' %}checked{% endif %}> Es ist das Pflichtpraktikum meiner Schule</label>
+  </fieldset>
+
+  <fieldset class="grid-2">
+    <legend>Wann findet dein Praktikum statt?</legend>
+    <label>Von <input type="date" name="von" value="{{ q.get('von', '') }}" data-date-start></label>
+    <label>Bis <input type="date" name="bis" value="{{ q.get('bis', '') }}" data-date-end></label>
+    <p class="hint span-2" data-date-error role="alert" hidden>Das Ende liegt vor dem Beginn.</p>
+  </fieldset>
+
+  <fieldset class="grid-2">
+    <legend>Wo ist deine Schule?</legend>
+    <label>PLZ der Schule <input type="text" name="schule_plz" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="off" value="{{ q.get('schule_plz', '') }}"></label>
+    <label>PLZ Zuhause <span class="muted">(optional)</span><input type="text" name="wohn_plz" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="off" value="{{ q.get('wohn_plz', '') }}"></label>
+    <p class="hint span-2">Wir nutzen nur die Postleitzahl, nicht deine Adresse – und speichern sie nicht.</p>
+  </fieldset>
+
+  <fieldset class="grid-2">
+    <legend>Wie lange darf dein Weg dauern?</legend>
+    <label>Höchstens
+      <select name="max_minuten">
+        {% for m in [15, 30, 45, 60, 75, 90] %}<option value="{{ m }}" {% if q.get('max_minuten', '45') == m|string %}selected{% endif %}>{{ m }} Minuten</option>{% endfor %}
+      </select>
+    </label>
+    <label>Unterwegs mit
+      <select name="verkehrsmittel">
+        {% for k, v in TRAVEL_MODES %}<option value="{{ k }}" {% if q.get('verkehrsmittel', 'oepnv') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </label>
+  </fieldset>
+
+  <details class="more-filters">
+    <summary>Weitere Filter</summary>
+    <label>Art des Betriebs
+      <select name="arbeitgeberart">
+        <option value="">alle</option>
+        {% for t in EMPLOYER_TYPES %}<option {% if q.get('arbeitgeberart') == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="alle" value="1" {% if q.get('alle') == '1' %}checked{% endif %}> Auch Angebote zeigen, die nicht passen (z. B. Frist vorbei)</label>
+  </details>
+
+  <button class="btn btn-primary btn-lg" type="submit">Passende Angebote anzeigen</button>
+</form>

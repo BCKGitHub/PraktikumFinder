@@ -1,0 +1,32 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>{% if emp.id %}{{ emp.name }}{% else %}Neuer Betrieb{% endif %}</h1>
+<form method="post" action="/admin/arbeitgeber/{{ emp.id or 0 }}" class="card stacked">
+  {{ csrf() }}
+  <div class="grid-2">
+    <label class="span-2">Name * <input name="name" required value="{{ emp.name or '' }}"></label>
+    <label>Art <select name="employer_type"><option value="">–</option>{% for t in EMPLOYER_TYPES %}<option {% if emp.employer_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label>Webseite <input type="url" name="website" value="{{ emp.website or '' }}"></label>
+    <label class="span-2">Beschreibung <textarea name="description" rows="3">{{ emp.description or '' }}</textarea></label>
+    <label>Adresse <input name="address_line" value="{{ emp.address_line or '' }}"></label>
+    <label>PLZ <input name="postcode_code" maxlength="5" value="{{ emp.postcode_code or '' }}"></label>
+    <label>Ort <input name="city_name" value="{{ emp.city_name or '' }}"></label>
+    <label class="span-2">Interne Notizen <textarea name="notes" rows="2">{{ emp.notes or '' }}</textarea></label>
+  </div>
+  <h2>Kontakte</h2>
+  {% for c in emp.contacts %}
+  <p>{{ c.name or "–" }} · {{ c.role or "" }} · {{ c.email or "" }} · {{ c.phone or "" }} · {{ "öffentlich" if c.publish_allowed else "nicht öffentlich" }}
+    <label class="check small"><input type="checkbox" name="delete_contact_{{ c.id }}" value="1"> entfernen</label></p>
+  {% endfor %}
+  <div class="grid-2">
+    <label>Neuer Kontakt: Name <input name="contact_name"></label>
+    <label>Funktion <input name="contact_role"></label>
+    <label>E-Mail <input type="email" name="contact_email"></label>
+    <label>Telefon <input name="contact_phone"></label>
+    <label class="check span-2"><input type="checkbox" name="contact_publish" value="1"> Veröffentlichung erlaubt</label>
+  </div>
+  <button class="btn btn-primary" type="submit">Speichern</button>
+</form>
+{% if emp.opportunities %}<h2>Angebote</h2><ul>{% for o in emp.opportunities %}<li><a href="/admin/angebote/{{ o.id }}">{{ o.title }}</a> – {{ STATUS_LABELS[o.status] }}</li>{% endfor %}</ul>{% endif %}
+{% endblock %}

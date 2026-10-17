@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Meine Bewerbungen{% endblock %}
+{% block content %}
+<h1>Meine Bewerbungen</h1>
+<p class="muted small">Behalte den Überblick über deine Bewerbungen. Alles bleibt nur in diesem Browser gespeichert.</p>
+<div data-reminders aria-live="polite"></div>
+<div data-tracker-list aria-live="polite"><p class="loading">Wird geladen …</p></div>
+<template id="tracker-empty">
+  <section class="empty-state"><h2>Noch keine Bewerbungen</h2><p>Öffne ein Angebot und tippe auf „Bewerbung vorbereiten“ – dort kannst du es zu deinen Bewerbungen hinzufügen. Gemerkte Angebote kannst du auch hier übernehmen.</p><a class="btn btn-primary" href="/merkliste">Zur Merkliste</a></section>
+</template>
+{% endblock %}

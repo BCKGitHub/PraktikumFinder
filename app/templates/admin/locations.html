@@ -1,0 +1,60 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>Orte, Regeln &amp; Einstellungen</h1>
+
+<section class="card">
+  <h2>Erreichbarkeitsregeln</h2>
+  <p class="small">Die Regel des Bundeslands der Schul-PLZ gilt, sonst die Standardregel. Angebote außerhalb der Grenze werden nie ausgeblendet, sondern als „Schule muss zustimmen“ markiert, wenn das Häkchen gesetzt ist.</p>
+  {% for r in rules + [none] %}
+  <form method="post" action="/admin/orte/regeln" class="rule-form">
+    {{ csrf() }}
+    <input type="hidden" name="rule_id" value="{{ r.id if r else '' }}">
+    <div class="grid-4">
+      <label>Name <input name="name" value="{{ r.name if r else '' }}" placeholder="Neue Regel" {% if not r %}required{% endif %}></label>
+      <label>Bundesland <select name="state_id"><option value="">alle (Standard)</option>{% for s in states %}<option value="{{ s.id }}" {% if r and r.state_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></label>
+      <label>Bezugspunkt <select name="reference">{% for k, v in [("either", "Schule oder Zuhause"), ("school", "nur Schule"), ("home", "nur Zuhause")] %}<option value="{{ k }}" {% if r and r.reference == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+      <label>Max. Minuten <input type="number" name="max_travel_minutes" value="{{ r.max_travel_minutes if r and r.max_travel_minutes else '' }}"></label>
+      <label>Max. km (optional) <input name="max_distance_km" value="{{ r.max_distance_km if r and r.max_distance_km else '' }}"></label>
+      <label class="check"><input type="checkbox" name="approval_required_beyond" value="1" {% if not r or r.approval_required_beyond %}checked{% endif %}> darüber: Schulzustimmung</label>
+      <label class="check"><input type="checkbox" name="active" value="1" {% if not r or r.active %}checked{% endif %}> aktiv</label>
+      <label class="span-4">Hinweis für Schüler*innen <textarea name="note" rows="2">{{ r.note or '' if r else '' }}</textarea></label>
+    </div>
+    <button class="btn" type="submit">{{ "Speichern" if r else "Regel anlegen" }}</button>
+  </form>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Einstellungen</h2>
+  <form method="post" action="/admin/einstellungen" class="stacked">
+    {{ csrf() }}
+    <div class="grid-4">
+      <label>Prüfintervall (Tage) <input type="number" name="verification_period_days" value="{{ settings.verification_period_days }}"></label>
+      <label>„Frist läuft ab“ ab (Tage) <input type="number" name="deadline_warning_days" value="{{ settings.deadline_warning_days }}"></label>
+      <label>Standard max. Weg (Min.) <input type="number" name="default_max_travel_minutes" value="{{ settings.default_max_travel_minutes }}"></label>
+      <label>Scraper: „nicht mehr gefunden“ nach (Tage) <input type="number" name="scraper_not_seen_days" value="{{ settings.scraper_not_seen_days }}"></label>
+    </div>
+    <label>Reiseprofile für die Wegschätzung (JSON) <textarea name="travel_profiles" rows="8" class="mono">{{ profiles }}</textarea></label>
+    <button class="btn btn-primary" type="submit">Speichern</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Postleitzahlen ({{ total }})</h2>
+  <form method="get" class="filters"><input type="search" name="q" value="{{ q }}" placeholder="PLZ oder Ort"><button class="btn">Suchen</button></form>
+  <table class="table small"><thead><tr><th>PLZ</th><th>Ort</th><th>Land</th><th>Koordinaten</th></tr></thead><tbody>
+  {% for p in postcodes %}<tr><td>{{ p.code }}</td><td>{{ p.city.name }}</td><td>{{ p.city.state.code }}</td><td>{{ "%.4f"|format(p.latitude) }}, {{ "%.4f"|format(p.longitude) }}</td></tr>{% endfor %}
+  </tbody></table>
+  <form method="post" action="/admin/orte/plz" class="inline-form">
+    {{ csrf() }}
+    <input name="code" placeholder="PLZ" maxlength="5" required>
+    <input name="city" placeholder="Ort" required>
+    <select name="state_id">{% for s in states %}<option value="{{ s.id }}" {% if s.code == "HE" %}selected{% endif %}>{{ s.code }}</option>{% endfor %}</select>
+    <input name="latitude" placeholder="Breite" required>
+    <input name="longitude" placeholder="Länge" required>
+    <button class="btn" type="submit">PLZ speichern</button>
+  </form>
+  <p class="small muted">Für ganz Deutschland: PLZ-Datei importieren mit <code>python -m app.cli import-postcodes datei.csv</code> (siehe README).</p>
+</section>
+{% endblock %}

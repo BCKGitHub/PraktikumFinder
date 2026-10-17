@@ -1,0 +1,46 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>Bereiche</h1>
+<table class="table">
+  <thead><tr><th>Pos.</th><th>Bereich</th><th>Kürzel</th><th>Angebote</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for d in roots %}
+    <tr><td>{{ d.position }}</td><td>{{ d.icon or "" }} <strong>{{ d.name }}</strong>{% if d.featured %} ★{% endif %}</td><td><code>{{ d.slug }}</code></td><td>{{ counts.get(d.id, 0) }}</td><td>{{ "aktiv" if d.active else "inaktiv" }}</td><td><a href="?edit={{ d.id }}">bearbeiten</a></td></tr>
+    {% for c in d.children %}
+    <tr class="sub"><td>{{ c.position }}</td><td>↳ {{ c.name }}</td><td><code>{{ c.slug }}</code></td><td>{{ counts.get(c.id, 0) }}</td><td>{{ "aktiv" if c.active else "inaktiv" }}</td><td><a href="?edit={{ c.id }}">bearbeiten</a></td></tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+
+{% set e = editing %}
+<form method="post" action="/admin/bereiche" class="card stacked">
+  <h2>{% if e %}„{{ e.name }}“ bearbeiten{% else %}Neuer Bereich / Unterbereich{% endif %}</h2>
+  {{ csrf() }}
+  <input type="hidden" name="domain_id" value="{{ e.id if e else '' }}">
+  <div class="grid-2">
+    <label>Name <input name="name" required value="{{ e.name if e else '' }}"></label>
+    <label>Kürzel (URL) <input name="slug" required pattern="[a-z0-9-]+" value="{{ e.slug if e else '' }}"></label>
+    <label>Übergeordneter Bereich
+      <select name="parent_id"><option value="">– keiner (Hauptbereich) –</option>
+        {% for d in roots %}<option value="{{ d.id }}" {% if e and e.parent_id == d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></label>
+    <label>Symbol (Emoji) <input name="icon" maxlength="8" value="{{ e.icon or '' if e else '' }}"></label>
+    <label>Position <input type="number" name="position" value="{{ e.position if e else 100 }}"></label>
+    <div><label class="check"><input type="checkbox" name="active" value="1" {% if not e or e.active %}checked{% endif %}> aktiv</label>
+      <label class="check"><input type="checkbox" name="featured" value="1" {% if e and e.featured %}checked{% endif %}> hervorgehoben</label></div>
+    <label class="span-2">Beschreibung <input name="description" value="{{ e.description or '' if e else '' }}"></label>
+    <label class="span-2">Stichwörter für automatische Zuordnung (kommagetrennt) <textarea name="keywords" rows="2">{{ e.keywords|join(", ") if e else '' }}</textarea></label>
+    <label class="span-2">Verwandte Berufe (kommagetrennt) <textarea name="related_jobs" rows="2">{{ e.related_jobs|join(", ") if e else '' }}</textarea></label>
+  </div>
+  <button class="btn btn-primary" type="submit">Speichern</button>
+  {% if e %}<a href="/admin/bereiche">Abbrechen</a>{% endif %}
+</form>
+
+<form method="post" action="/admin/tags" class="card inline-form">
+  {{ csrf() }}
+  <label>Neue Tätigkeit (Tag) <input name="name" maxlength="80" required placeholder="z. B. Am Computer arbeiten"></label>
+  <button class="btn" type="submit">Hinzufügen</button>
+  <p class="small">Vorhanden: {{ tags|map(attribute="name")|join(", ") or "keine" }}</p>
+</form>
+{% endblock %}

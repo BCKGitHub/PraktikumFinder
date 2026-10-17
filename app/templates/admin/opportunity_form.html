@@ -1,0 +1,113 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+{% set o = opp %}
+<h1>{% if o and o.id %}Angebot bearbeiten{% else %}Neues Angebot{% endif %}</h1>
+{% if errors %}<div class="alert alert-error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+
+{% if o and o.id %}
+<section class="card status-panel">
+  <p>Status: <strong>{{ STATUS_LABELS[o.status] }}</strong> · Prüfung: <strong>{{ VERIFICATION_LABELS.get(o.verification_status) }}</strong>
+     · Quelle: {{ o.source }}{% if o.source_url %} (<a href="{{ o.source_url }}" rel="noopener noreferrer" target="_blank">Original</a>){% endif %}
+     {% if o.status in ("published", "expired", "closed") %} · <a href="/angebote/{{ o.id }}" target="_blank">Öffentliche Ansicht</a>{% endif %}</p>
+  {% if blockers %}<p class="alert alert-warn small">Vor dem Veröffentlichen fehlt: {{ blockers|join(" ") }}</p>{% endif %}
+  {% if o.data_quality_notes %}<p class="small">Hinweise: {{ o.data_quality_notes }}</p>{% endif %}
+  <form method="post" action="/admin/angebote/{{ o.id }}/status" class="inline-form">
+    {{ csrf() }}
+    <label>Status ändern
+      <select name="status">{% for k, v in STATUS_LABELS.items() %}<option value="{{ k }}" {% if k == o.status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+    <input name="note" placeholder="Notiz (optional)" maxlength="300">
+    <button class="btn" type="submit">Übernehmen</button>
+  </form>
+  <form method="post" action="/admin/angebote/{{ o.id }}/pruefen" class="inline-form" id="pruefung">
+    {{ csrf() }}
+    <label>Prüfung erfassen
+      <select name="verification_status">{% for k, v in VERIFICATION_LABELS.items() %}<option value="{{ k }}" {% if k == o.verification_status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+    <input name="source" placeholder="Quelle, z. B. Telefonat mit Frau X am …" maxlength="300">
+    <input name="notes" placeholder="Notiz" maxlength="500">
+    <button class="btn" type="submit">Prüfung speichern</button>
+  </form>
+  {% if o.verifications %}<details><summary>Prüfverlauf ({{ o.verifications|length }})</summary><ul class="small">
+    {% for v in o.verifications %}<li>{{ v.verified_at|fmt_date }} · {{ VERIFICATION_LABELS.get(v.verification_status) }} · {{ v.source or "" }} · {{ v.verified_by or "" }}{% if v.notes %} – {{ v.notes }}{% endif %}</li>{% endfor %}
+  </ul></details>{% endif %}
+</section>
+{% endif %}
+
+<form method="post" action="{% if o and o.id %}/admin/angebote/{{ o.id }}{% else %}/admin/angebote/neu{% endif %}" class="card stacked admin-form">
+  {{ csrf() }}
+  <fieldset class="grid-2"><legend>Grunddaten</legend>
+    <label class="span-2">Betrieb *
+      <select name="employer_id" required><option value="">– wählen –</option>
+        {% for e in employers %}<option value="{{ e.id }}" {% if o and o.employer_id == e.id %}selected{% endif %}>{{ e.name }}</option>{% endfor %}
+      </select> <a class="small" href="/admin/arbeitgeber/0">Neuen Betrieb anlegen</a></label>
+    <label class="span-2">Titel * <input name="title" required maxlength="250" value="{{ o.title if o else '' }}"></label>
+    <label class="span-2">Beschreibung <textarea name="description" rows="5">{{ o.description or '' if o else '' }}</textarea></label>
+  </fieldset>
+  <fieldset><legend>Bereiche *</legend>
+    <div class="check-grid">
+    {% set chosen = o.domains|map(attribute="id")|list if o else [] %}
+    {% for d in domains %}
+      <label class="check"><input type="checkbox" name="domain_ids" value="{{ d.id }}" {% if d.id in chosen %}checked{% endif %}> {{ d.name }}{% if not d.active %} (inaktiv){% endif %}</label>
+      {% for c in d.children %}<label class="check sub"><input type="checkbox" name="domain_ids" value="{{ c.id }}" {% if c.id in chosen %}checked{% endif %}> {{ c.name }}</label>{% endfor %}
+    {% endfor %}
+    </div>
+    {% if tags %}<div class="check-grid"><span class="label-text">Tätigkeiten</span>
+      {% set chosen_tags = o.tags|map(attribute="id")|list if o else [] %}
+      {% for t in tags %}<label class="check"><input type="checkbox" name="tag_ids" value="{{ t.id }}" {% if t.id in chosen_tags %}checked{% endif %}> {{ t.name }}</label>{% endfor %}
+    </div>{% endif %}
+  </fieldset>
+  <fieldset class="grid-2"><legend>Ort</legend>
+    <label>Ortsbezeichnung <input name="location_label" value="{{ o.location_label or '' if o else '' }}" placeholder="z. B. Frankfurt-Bockenheim"></label>
+    <label>Straße <input name="street" value="{{ o.street or '' if o else '' }}"></label>
+    <label>PLZ <input name="postcode_code" maxlength="5" value="{{ o.postcode_code or '' if o else '' }}"></label>
+    <label>Ort <input name="city_name" value="{{ o.city_name or '' if o else '' }}"></label>
+    <label>Breitengrad <input name="latitude" value="{{ o.latitude if o and o.latitude is not none else '' }}" placeholder="leer = aus PLZ"></label>
+    <label>Längengrad <input name="longitude" value="{{ o.longitude if o and o.longitude is not none else '' }}"></label>
+    <label class="check span-2"><input type="checkbox" name="address_public" value="1" {% if not o or o.address_public %}checked{% endif %}> Genaue Adresse öffentlich anzeigen</label>
+    <label class="span-2">ÖPNV-Hinweise <input name="travel_information" value="{{ o.travel_information or '' if o else '' }}"></label>
+  </fieldset>
+  <fieldset class="grid-2"><legend>Voraussetzungen</legend>
+    <label>Mindestalter <input type="number" name="min_age" min="10" max="25" value="{{ o.min_age if o and o.min_age is not none else '' }}"></label>
+    <label>Höchstalter <input type="number" name="max_age" min="10" max="25" value="{{ o.max_age if o and o.max_age is not none else '' }}"></label>
+    <label>Ab Klasse <input type="number" name="min_grade" min="5" max="13" value="{{ o.min_grade if o and o.min_grade is not none else '' }}"></label>
+    <label>Bis Klasse <input type="number" name="max_grade" min="5" max="13" value="{{ o.max_grade if o and o.max_grade is not none else '' }}"></label>
+    <div class="span-2 check-grid"><span class="label-text">Schulformen (leer = alle)</span>
+      {% for s in SCHOOL_TYPES %}<label class="check"><input type="checkbox" name="accepted_school_types" value="{{ s }}" {% if o and s in (o.accepted_school_types or []) %}checked{% endif %}> {{ s }}</label>{% endfor %}</div>
+    {% macro tri(name, value) %}<select name="{{ name }}"><option value="">unbekannt</option><option value="ja" {% if value == true %}selected{% endif %}>ja</option><option value="nein" {% if value == false %}selected{% endif %}>nein</option></select>{% endmacro %}
+    <label>Pflichtpraktikum möglich {{ tri("mandatory_practicum_supported", o.mandatory_practicum_supported if o else none) }}</label>
+    <label>Schulvereinbarung nötig {{ tri("school_agreement_required", o.school_agreement_required if o else none) }}</label>
+    <label class="span-2">Sprachanforderungen <input name="language_requirements" value="{{ o.language_requirements or '' if o else '' }}"></label>
+    <label class="span-2">Kleidung / Sicherheit <textarea name="clothing_safety" rows="2">{{ o.clothing_safety or '' if o else '' }}</textarea></label>
+    <label class="span-2">Hinweis zur Schulzustimmung <textarea name="school_approval_note" rows="2">{{ o.school_approval_note or '' if o else '' }}</textarea></label>
+  </fieldset>
+  <fieldset class="grid-2"><legend>Termine &amp; Plätze</legend>
+    {% for i in range(1, 5) %}{% set w = o.date_windows[i-1] if o and o.date_windows|length >= i else none %}
+    <label>Zeitraum {{ i }} von <input type="date" name="window_start_{{ i }}" value="{{ w.start_date if w else '' }}"></label>
+    <label>bis <input type="date" name="window_end_{{ i }}" value="{{ w.end_date if w else '' }}"></label>
+    {% endfor %}
+    <label class="check"><input type="checkbox" name="flexible_dates" value="1" {% if o and o.flexible_dates %}checked{% endif %}> Flexible Termine</label>
+    <label>Hinweis <input name="flexible_dates_note" value="{{ o.flexible_dates_note or '' if o else '' }}"></label>
+    <label>Bewerbungsfrist <input type="date" name="application_deadline" value="{{ o.application_deadline or '' if o else '' }}"></label>
+    <label>Ablaufdatum der Anzeige <input type="date" name="expires_at" value="{{ o.expires_at or '' if o else '' }}"></label>
+    <label>Plätze <input type="number" name="number_of_places" min="0" value="{{ o.number_of_places if o and o.number_of_places is not none else '' }}"></label>
+    <label>Verfügbarkeit <select name="availability">{% for k, v in [("unknown", "unbekannt"), ("open", "Plätze frei"), ("few_places", "wenige Plätze"), ("full", "voll")] %}<option value="{{ k }}" {% if o and o.availability == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+  </fieldset>
+  <fieldset class="grid-2"><legend>Bewerbung</legend>
+    <label>Bewerbungsweg <input name="application_method" value="{{ o.application_method or '' if o else '' }}"></label>
+    <label>Bewerbungs-E-Mail <input type="email" name="application_email" value="{{ o.application_email or '' if o else '' }}"></label>
+    <label class="span-2">Offizieller Link <input type="url" name="official_url" value="{{ o.official_url or '' if o else '' }}"></label>
+    <label class="span-2">Unterlagen (eine pro Zeile) <textarea name="documents" rows="3">{% if o %}{% for d in o.documents %}{{ d.name }}
+{% endfor %}{% endif %}</textarea></label>
+    <label class="span-2">Datenqualität / interne Notizen <textarea name="data_quality_notes" rows="2">{{ o.data_quality_notes or '' if o else '' }}</textarea></label>
+  </fieldset>
+  <button class="btn btn-primary" type="submit">Speichern</button>
+</form>
+
+{% if o and o.id %}
+<form method="post" action="/admin/angebote/{{ o.id }}/loeschen" class="card inline-form danger-zone">
+  {{ csrf() }}
+  <label>Endgültig löschen – zum Bestätigen „LÖSCHEN“ eintippen <input name="confirm" autocomplete="off"></label>
+  <button class="btn btn-danger" type="submit">Löschen</button>
+</form>
+{% endif %}
+{% endblock %}

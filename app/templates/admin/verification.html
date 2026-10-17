@@ -1,0 +1,8 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<h1>Prüfung &amp; Datenqualität</h1>
+<p class="small muted">Prüfintervall: {{ period }} Tage (änderbar unter „Orte &amp; Regeln“).</p>
+<nav class="tabs">{% for key, (label, its) in queues.items() %}<a href="?queue={{ key }}" {% if key == current %}aria-current="page"{% endif %}>{{ label }} ({{ its|length }})</a>{% endfor %}</nav>
+{% include "admin/_opp_table.html" %}
+<p class="small muted">Defekte Links werden im MVP noch nicht automatisch geprüft (siehe Backlog).</p>
+{% endblock %}

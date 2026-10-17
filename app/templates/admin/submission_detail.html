@@ -1,0 +1,18 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>Einreichung: {{ sub.payload.title }}</h1>
+<p>{{ "Änderung für " if sub.kind == "update" else "Neues Angebot" }}{% if target %}<a href="/admin/angebote/{{ target.id }}">{{ target.title }}</a>{% endif %} · eingegangen {{ sub.created_at|fmt_date }} · Status: {{ sub.status }}</p>
+<p class="small muted">Inhalte stammen vom Betrieb und sind ungeprüft. Auf seriöse, jugendgerechte Angebote achten.</p>
+<table class="table kv-table"><tbody>
+{% for k, v in sub.payload.items() %}<tr><th>{{ k }}</th><td>{% if v is iterable and v is not string %}{{ v|join(", ") }}{% else %}{{ v if v is not none else "–" }}{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+{% if sub.status == "pending" %}
+<form method="post" action="/admin/einreichungen/{{ sub.id }}" class="card inline-form">
+  {{ csrf() }}
+  <input name="note" placeholder="Notiz (optional)" maxlength="500">
+  <button class="btn btn-primary" name="decision" value="approve" type="submit">Übernehmen (als „Wartet auf Prüfung“)</button>
+  <button class="btn btn-danger" name="decision" value="reject" type="submit">Ablehnen</button>
+</form>
+{% endif %}
+{% endblock %}

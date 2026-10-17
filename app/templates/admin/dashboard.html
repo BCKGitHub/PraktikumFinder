@@ -1,0 +1,17 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<h1>Übersicht</h1>
+<div class="stat-grid">
+  {% for s, n in counts.items() %}<a class="stat" href="/admin/angebote?status={{ s }}"><span class="stat-n">{{ n }}</span><span>{{ STATUS_LABELS[s] }}</span></a>{% endfor %}
+</div>
+<h2>Was zu tun ist</h2>
+<ul class="todo">
+  <li><a href="/admin/einreichungen">Einreichungen von Betrieben</a>: <strong>{{ pending_subs }}</strong></li>
+  <li><a href="/admin/meldungen">Offene Fehlermeldungen</a>: <strong>{{ open_reports }}</strong></li>
+  {% for key, (label, items) in queues.items() %}
+  <li><a href="/admin/pruefung?queue={{ key }}">{{ label }}</a>: <strong class="{{ 'warn' if items }}">{{ items|length }}</strong></li>
+  {% endfor %}
+</ul>
+<h2>Quellen</h2>
+<ul>{% for s in sources %}<li>{{ s.name }} – {{ "aktiv" if s.enabled else "inaktiv" }}{% if s.last_status %} · {{ s.last_status }}{% endif %}</li>{% else %}<li>Keine Quellen.</li>{% endfor %}</ul>
+{% endblock %}

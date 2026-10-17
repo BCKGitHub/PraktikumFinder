@@ -1,0 +1,10 @@
+<div class="checklist" data-checklist="{{ checklist_key }}">
+  {% for section, items in checklist.items() %}
+  <fieldset>
+    <legend>{{ section }}</legend>
+    {% for item in items %}
+    <label class="check"><input type="checkbox" data-check-item="{{ loop.index }}-{{ section|length }}"> {{ item }}</label>
+    {% endfor %}
+  </fieldset>
+  {% endfor %}
+</div>

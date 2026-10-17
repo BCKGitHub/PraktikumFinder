@@ -1,0 +1,15 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<h1>Statistik (anonym)</h1>
+<p class="small muted">Nur Tageszähler ohne Personenbezug – keine IP-Adressen, keine Cookies, keine Einzelverläufe. Letzte {{ days }} Tage. <a href="?days=7">7</a> · <a href="?days=30">30</a> · <a href="?days=90">90</a></p>
+{% set names = {"search_started": "Suche geöffnet", "search_completed": "Suchen abgeschickt", "search_zero_results": "Suchen ohne Treffer", "opportunity_view": "Angebotsaufrufe", "saved": "Gemerkt", "helper_started": "Bewerbungshilfe geöffnet", "helper_completed": "Bewerbungshilfe abgeschlossen", "contact_click": "Klicks auf Kontakt", "report_submitted": "Fehlermeldungen", "employer_submission": "Meldungen von Betrieben", "domain_selected": "Gewählte Bereiche", "results_bucket": "Trefferzahl"} %}
+<div class="stat-grid">
+  {% for k, label in names.items() if k not in ("domain_selected", "results_bucket") %}<div class="stat"><span class="stat-n">{{ totals.get(k, 0) }}</span><span>{{ label }}</span></div>{% endfor %}
+  <div class="stat"><span class="stat-n">{{ "%.0f"|format(zero_rate) ~ " %" if zero_rate is not none else "–" }}</span><span>Suchen ohne Treffer</span></div>
+  <div class="stat"><span class="stat-n">{{ "%.0f"|format(helper_rate) ~ " %" if helper_rate is not none else "–" }}</span><span>Bewerbungshilfe abgeschlossen</span></div>
+</div>
+{% for ev in ("domain_selected", "results_bucket") %}{% if dims.get(ev) %}
+<h2>{{ names[ev] }}</h2>
+<table class="table small"><tbody>{% for d, n in dims[ev]|sort(attribute=1, reverse=true) %}<tr><td>{{ d }}</td><td>{{ n }}</td></tr>{% endfor %}</tbody></table>
+{% endif %}{% endfor %}
+{% endblock %}

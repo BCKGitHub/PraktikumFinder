@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Meine Daten{% endblock %}
+{% block content %}
+<h1>Meine Daten &amp; Datenschutz</h1>
+<section class="card">
+  <h2>Was wir über dich wissen</h2>
+  <p>Nichts, was dich persönlich erkennbar macht. Für die Suche brauchst du kein Konto. Deine Merkliste, deine Bewerbungsübersicht und deine Häkchen in Checklisten speichert nur dein eigener Browser (sogenannter „lokaler Speicher“). Sie werden nicht an uns gesendet.</p>
+  <p>Wir setzen ein technisch notwendiges Cookie, das Formulare vor Missbrauch schützt. Es enthält keine Angaben über dich.</p>
+  <p>Wir zählen anonym, wie oft z. B. gesucht wird – ohne IP-Adresse, ohne Tracking, ohne Werbung.</p>
+</section>
+<section class="card">
+  <h2>In diesem Browser gespeichert</h2>
+  <p data-storage-summary>Wird geladen …</p>
+  <div class="actions">
+    <button type="button" class="btn" data-export>Meine Daten herunterladen (JSON)</button>
+    <button type="button" class="btn btn-danger" data-wipe>Alles in diesem Browser löschen</button>
+  </div>
+  <p class="small" data-wipe-msg role="status" hidden>Gelöscht.</p>
+</section>
+<p><a href="/datenschutz">Ausführliche Datenschutzerklärung</a></p>
+{% endblock %}

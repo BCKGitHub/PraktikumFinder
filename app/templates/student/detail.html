@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import labels, csrf with context %}
+{% block title %}{{ opp.title }}{% endblock %}
+{% block content %}
+<p><a href="{% if query_string %}/ergebnisse?{{ query_string }}{% else %}/suche{% endif %}">← Zurück</a></p>
+{% if opp.is_demo %}<p class="alert alert-info small">Fiktives Beispielangebot für Test und Demo – dieser Betrieb existiert nicht.</p>{% endif %}
+
+<article class="detail">
+  <header class="detail-head">
+    <h1>{{ opp.title }}</h1>
+    <p class="employer">{{ opp.employer.name }}{% if opp.employer.employer_type %} · {{ opp.employer.employer_type }}{% endif %}</p>
+    {{ labels(match) }}
+    <div class="actions">
+      <button type="button" class="btn" data-save="{{ opp.id }}" aria-pressed="false">☆ Merken</button>
+      <a class="btn btn-primary" href="/angebote/{{ opp.id }}/bewerbung">Bewerbung vorbereiten</a>
+    </div>
+  </header>
+
+  <section class="card" aria-labelledby="passt">
+    <h2 id="passt">Passt dieses Angebot zu dir?</h2>
+    {% if not query.age and not query.start and not query.school %}
+      <p class="muted">Gib bei der <a href="/suche">Suche</a> dein Alter, deine Termine und die PLZ deiner Schule an – dann prüfen wir das für dich.</p>
+    {% endif %}
+    <ul class="checklist-result">
+      {% for key, title in [("age", "Alter"), ("grade", "Klasse"), ("school_type", "Schulform"), ("mandatory", "Pflichtpraktikum"), ("dates", "Termine"), ("travel", "Weg")] %}
+        {% set fit = match.checks[key].value %}
+        {% if fit != "not_asked" or key in ("age", "dates", "travel") %}
+        <li class="fit-{{ fit }}"><span class="fit-icon" aria-hidden="true">{% if fit == "fit" %}✓{% elif fit == "no_fit" %}✗{% elif fit == "not_asked" %}–{% else %}?{% endif %}</span>
+          <span><strong>{{ title }}:</strong> {{ match.reasons[key] }}</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <ul class="label-explanations small">
+      {% for l in match.labels %}<li><strong>{{ l.text }}:</strong> {{ l.explanation.split(': ', 1)[-1] }}</li>{% endfor %}
+    </ul>
+    <p class="school-warning"><strong>Wichtig:</strong> Deine Schule muss den Praktikumsplatz möglicherweise bestätigen. Dieses Angebot scheint nach deinen Angaben erreichbar zu sein – ob der Platz in Ordnung ist, entscheidet deine Schule.</p>
+    {% if opp.school_approval_note %}<p>{{ opp.school_approval_note }}</p>{% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="worum">
+    <h2 id="worum">Worum geht's?</h2>
+    <p>{{ opp.description|nl2br if opp.description else (none|or_missing("Keine Beschreibung angegeben – frag beim Betrieb nach.")) }}</p>
+    {% if opp.domains %}<p class="small">Bereich: {% for d in opp.domains %}{{ d.name }}{{ ", " if not loop.last }}{% endfor %}</p>{% endif %}
+    {% if opp.tags %}<ul class="tags" role="list">{% for t in opp.tags %}<li>{{ t.name }}</li>{% endfor %}</ul>{% endif %}
+    {% if opp.employer.description %}<p class="small muted">Über den Betrieb: {{ opp.employer.description }}</p>{% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="eckdaten">
+    <h2 id="eckdaten">Eckdaten</h2>
+    <dl class="kv">
+      <dt>Alter</dt><dd>{% if opp.min_age or opp.max_age %}{% if opp.min_age %}ab {{ opp.min_age }}{% endif %}{% if opp.max_age %} bis {{ opp.max_age }}{% endif %} Jahre{% else %}{{ none|or_missing("Nicht angegeben – bitte nachfragen") }}{% endif %}</dd>
+      <dt>Klasse</dt><dd>{% if opp.min_grade or opp.max_grade %}{% if opp.min_grade %}ab Klasse {{ opp.min_grade }}{% endif %}{% if opp.max_grade %} bis Klasse {{ opp.max_grade }}{% endif %}{% else %}{{ none|or_missing }}{% endif %}</dd>
+      <dt>Schulformen</dt><dd>{{ opp.accepted_school_types|join(", ") if opp.accepted_school_types else "keine Einschränkung angegeben" }}</dd>
+      <dt>Pflichtpraktikum der Schule</dt><dd>{{ opp.mandatory_practicum_supported|yes_no }}</dd>
+      <dt>Zeiträume</dt><dd>
+        {% for w in opp.date_windows %}{{ w.start_date|fmt_date }} – {{ w.end_date|fmt_date }}<br>{% endfor %}
+        {% if opp.flexible_dates %}Flexible Termine{% if opp.flexible_dates_note %}: {{ opp.flexible_dates_note }}{% endif %}{% endif %}
+        {% if not opp.date_windows and not opp.flexible_dates %}{{ none|or_missing("Nicht angegeben – bitte nachfragen") }}{% endif %}
+      </dd>
+      <dt>Bewerbungsfrist</dt><dd>{{ opp.application_deadline|fmt_date if opp.application_deadline else "Keine Frist angegeben" }}</dd>
+      <dt>Plätze</dt><dd>{% if opp.availability == "full" %}Keine Plätze mehr frei{% elif opp.number_of_places is not none %}{{ opp.number_of_places }}{% else %}{{ none|or_missing }}{% endif %}{% if opp.availability == "unknown" %} <span class="muted">(Verfügbarkeit nicht bestätigt)</span>{% endif %}</dd>
+      <dt>Sprache</dt><dd>{{ opp.language_requirements|or_missing }}</dd>
+      <dt>Kleidung &amp; Sicherheit</dt><dd>{{ opp.clothing_safety|or_missing }}</dd>
+      <dt>Vereinbarung mit der Schule</dt><dd>{{ opp.school_agreement_required|yes_no }}</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="ort">
+    <h2 id="ort">Wo ist das?</h2>
+    <p>{% if opp.address_public and opp.street %}{{ opp.street }}, {% endif %}{{ opp.postcode_code or "" }} {{ opp.city_name or "" }}{% if opp.location_label and opp.location_label != opp.city_name %} ({{ opp.location_label }}){% endif %}</p>
+    {% if match.travel %}<p>Geschätzter Weg: <strong>ca. {{ match.travel.minutes }} Minuten</strong> von {{ "deiner Schule" if match.travel.reference == "school" else "deinem Zuhause" }} (Luftlinie {{ "%.1f"|format(match.travel.distance_km) }} km{% if match.travel.precision == "prefix" %}, ungefährer Ort{% endif %}). Das ist eine grobe Schätzung – prüfe die echte Verbindung z. B. in der App deines Verkehrsverbunds.</p>{% endif %}
+    <p>Bus &amp; Bahn: {{ opp.travel_information|or_missing("Keine Hinweise angegeben") }}</p>
+  </section>
+
+  <section class="card" aria-labelledby="unterlagen">
+    <h2 id="unterlagen">Was musst du für die Bewerbung einreichen?</h2>
+    {% if opp.documents %}<ul>{% for d in opp.documents %}<li>{{ d.name }}</li>{% endfor %}</ul>
+    {% else %}<p>{{ none|or_missing("Nicht angegeben – frag beim Betrieb nach.") }}</p>{% endif %}
+    <h3>So bewirbst du dich</h3>
+    <p>Bewerbungsweg: {{ opp.application_method|or_missing("Kontakt zum Betrieb aufnehmen") }}</p>
+    <ul class="contact">
+      {% if opp.application_email %}<li>E-Mail: <a href="mailto:{{ opp.application_email }}" data-event="contact_click">{{ opp.application_email }}</a></li>{% endif %}
+      {% if opp.official_url %}<li>Offizielle Seite: <a href="{{ opp.official_url }}" rel="noopener noreferrer nofollow" target="_blank" data-event="contact_click">{{ opp.official_url }}</a></li>{% endif %}
+      {% if opp.contact and opp.contact.publish_allowed and opp.contact.name %}<li>Ansprechperson: {{ opp.contact.name }}{% if opp.contact.role %} ({{ opp.contact.role }}){% endif %}</li>{% endif %}
+    </ul>
+    <a class="btn btn-primary" href="/angebote/{{ opp.id }}/bewerbung">Bewerbung vorbereiten</a>
+  </section>
+
+  <section class="card small" aria-labelledby="pruefung">
+    <h2 id="pruefung" class="h3">Wie aktuell sind diese Angaben?</h2>
+    <dl class="kv">
+      <dt>Status</dt><dd>{{ VERIFICATION_LABELS.get(opp.verification_status, opp.verification_status) }}</dd>
+      <dt>Zuletzt geprüft</dt><dd>{{ opp.last_verified_at|fmt_date if opp.last_verified_at else "noch nie" }}</dd>
+      <dt>Quelle</dt><dd>{{ opp.verification_source|or_missing }}</dd>
+      {% if opp.source_url and opp.source_url != opp.official_url %}<dt>Originalanzeige</dt><dd><a href="{{ opp.source_url }}" rel="noopener noreferrer nofollow" target="_blank">ansehen</a></dd>{% endif %}
+    </dl>
+    {% if opp.data_quality_notes and opp.source.startswith("scraper:") %}<p class="muted">{{ opp.data_quality_notes }}</p>{% endif %}
+    <p class="muted">Wir garantieren nicht, dass das Angebot noch verfügbar ist. Bitte prüfe alles direkt beim Betrieb.</p>
+  </section>
+
+  <section class="card small" id="melden" aria-labelledby="melden-h">
+    <h2 id="melden-h" class="h3">Stimmt etwas nicht?</h2>
+    {% if sent %}<p class="alert alert-success" role="status">Danke! Wir prüfen das Angebot.</p>{% endif %}
+    <form method="post" action="/angebote/{{ opp.id }}/melden" class="inline-form">
+      {{ csrf() }}
+      <label>Was ist falsch?
+        <select name="reason" required>
+          <option value="nicht_mehr_aktuell">Angebot gibt es nicht mehr</option>
+          <option value="falsche_angaben">Angaben sind falsch (z. B. Alter, Termine)</option>
+          <option value="kontakt_falsch">Kontakt / Link funktioniert nicht</option>
+          <option value="unangemessen">Inhalt ist unangemessen oder unseriös</option>
+          <option value="sonstiges">Sonstiges</option>
+        </select>
+      </label>
+      <label>Details (optional, bitte keine persönlichen Daten)
+        <textarea name="message" maxlength="1000" rows="2"></textarea>
+      </label>
+      <button class="btn btn-ghost" type="submit">Fehler melden</button>
+    </form>
+  </section>
+</article>
+{% endblock %}

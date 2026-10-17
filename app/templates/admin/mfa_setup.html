@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block title %}Zwei-Faktor einrichten{% endblock %}
+{% block content %}
+<form method="post" action="/admin/mfa/einrichten" class="card narrow stacked">
+  <h1>Zwei-Faktor-Anmeldung einrichten</h1>
+  <p>Für Admins ist ein zweiter Faktor Pflicht. Scanne den QR-Code mit einer Authenticator-App (z. B. Aegis, FreeOTP, Google/Microsoft Authenticator) oder gib den Schlüssel manuell ein.</p>
+  {% if qr_svg %}<div class="qr">{{ qr_svg }}</div>{% endif %}
+  <p class="small">Schlüssel: <code>{{ secret }}</code></p>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {{ csrf() }}
+  <label>Code aus der App <input name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+  <button class="btn btn-primary" type="submit">Bestätigen</button>
+</form>
+{% endblock %}

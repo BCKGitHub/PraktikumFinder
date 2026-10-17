@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Fehler{% endblock %}
+{% block content %}
+<section class="empty-state" role="alert">
+  <h1>{% if code == 404 %}Seite nicht gefunden{% elif code == 429 %}Kurz durchatmen{% else %}Ups, ein Fehler{% endif %}</h1>
+  <p>{{ message }}</p>
+  <p><a class="btn" href="/">Zur Startseite</a> <a class="btn btn-ghost" href="/suche">Zur Suche</a></p>
+</section>
+{% endblock %}

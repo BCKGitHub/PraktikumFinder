@@ -1,0 +1,11 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<div class="row-between"><h1>Betriebe</h1><a class="btn btn-primary" href="/admin/arbeitgeber/0">Neuer Betrieb</a></div>
+<form method="get" class="filters"><input type="search" name="q" value="{{ q }}" placeholder="Name"><button class="btn">Suchen</button></form>
+<table class="table">
+  <thead><tr><th>Name</th><th>Art</th><th>Ort</th><th>Angebote</th><th>Kontakte</th></tr></thead>
+  <tbody>{% for e in items %}
+  <tr><td><a href="/admin/arbeitgeber/{{ e.id }}">{{ e.name }}</a></td><td>{{ e.employer_type or "–" }}</td><td>{{ e.postcode_code or "" }} {{ e.city_name or "" }}</td><td>{{ e.opportunities|length }}</td><td>{{ e.contacts|length }}</td></tr>
+  {% else %}<tr><td colspan="5">Keine Betriebe.</td></tr>{% endfor %}</tbody>
+</table>
+{% endblock %}

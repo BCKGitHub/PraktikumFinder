@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Schülerpraktikum finden{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Finde dein Schülerpraktikum</h1>
+  <p class="lead">Schülerpraktika in deinem Wunschbereich – passend zu deinem Alter, deinen Schulterminen und einem machbaren Weg.</p>
+  <a class="btn btn-primary btn-lg" href="/suche">Jetzt suchen</a>
+  <p class="small muted">Ohne Anmeldung. Wir speichern keine persönlichen Daten von dir.</p>
+</section>
+
+<section aria-labelledby="bereiche">
+  <h2 id="bereiche">Welcher Bereich interessiert dich?</h2>
+  <ul class="domain-grid" role="list">
+    {% for d in domains %}
+    <li><a class="domain-tile" href="/suche?bereich={{ d.slug }}"><span class="domain-icon" aria-hidden="true">{{ d.icon or "•" }}</span><span>{{ d.name }}</span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="steps" aria-labelledby="sowirds">
+  <h2 id="sowirds">So funktioniert's</h2>
+  <ol class="step-list">
+    <li><strong>Bereich, Alter und Termine angeben.</strong> Wir zeigen dir, welche Angebote passen – und warum.</li>
+    <li><strong>Angebot ansehen.</strong> Alter, Termine, Weg, Frist und Unterlagen auf einen Blick.</li>
+    <li><strong>Bewerbung vorbereiten.</strong> Mit Checkliste und Vorlagen für E-Mail und Anschreiben auf Deutsch.</li>
+    <li><strong>Mit der Schule abklären.</strong> Deine Schule muss den Praktikumsplatz bestätigen.</li>
+  </ol>
+</section>
+
+<section class="notice">
+  <p>Aktuell {{ listing_count }} Angebote, vor allem im Rhein-Main-Gebiet (Frankfurt, Offenbach, Darmstadt, Mainz, Wiesbaden).
+  Angebote, die noch nicht bestätigt sind, kennzeichnen wir deutlich.</p>
+  <p><a href="/arbeitgeber">Sie bieten Schülerpraktika an? Angebot melden →</a></p>
+</section>
+{% endblock %}

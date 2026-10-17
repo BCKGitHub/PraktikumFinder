@@ -1,0 +1,38 @@
+# Development / single-server deployment.
+#   docker compose up --build                      -> http://localhost:8000
+#   docker compose --profile production up -d      -> HTTPS via Caddy on ports 80/443 (set DOMAIN in .env)
+services:
+  app:
+    build: .
+    env_file: .env
+    volumes:
+      - app-data:/app/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2
+    profiles: ["production"]
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

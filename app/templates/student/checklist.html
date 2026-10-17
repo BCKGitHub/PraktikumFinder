@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Bewerbungs-Checkliste{% endblock %}
+{% block content %}
+<h1>Checkliste für deine Bewerbung</h1>
+<p class="muted">Deine Häkchen werden nur in diesem Browser gespeichert.</p>
+{% set checklist_key = "general" %}
+{% include "student/_checklist.html" %}
+{% endblock %}

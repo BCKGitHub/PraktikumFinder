@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block title %}Admin-Anmeldung{% endblock %}
+{% block content %}
+<form method="post" action="/admin/login" class="card narrow stacked">
+  <h1>Admin-Anmeldung</h1>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {{ csrf() }}
+  <label>E-Mail <input type="email" name="email" required autocomplete="username"></label>
+  <label>Passwort <input type="password" name="password" required autocomplete="current-password"></label>
+  <button class="btn btn-primary" type="submit">Weiter</button>
+</form>
+{% endblock %}

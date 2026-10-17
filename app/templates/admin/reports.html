@@ -1,0 +1,17 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>Fehlermeldungen</h1>
+<table class="table"><thead><tr><th>Eingang</th><th>Angebot</th><th>Grund</th><th>Text</th><th>Erledigt</th></tr></thead><tbody>
+{% for r in items %}
+<tr>
+  <td>{{ r.created_at|fmt_date }}</td>
+  <td><a href="/admin/angebote/{{ r.opportunity_id }}">{{ r.opportunity.title }}</a></td>
+  <td>{{ reasons.get(r.reason, r.reason) }}</td>
+  <td class="small">{{ r.message or "–" }}</td>
+  <td>{% if r.resolved_at %}{{ r.resolved_at|fmt_date }}: {{ r.resolution }}{% else %}
+    <form method="post" action="/admin/meldungen/{{ r.id }}" class="inline-form">{{ csrf() }}<input name="resolution" placeholder="Was wurde getan?" maxlength="300"><button class="btn" type="submit">Erledigt</button></form>{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="5">Keine Meldungen.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

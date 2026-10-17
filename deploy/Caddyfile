@@ -1,0 +1,18 @@
+# Automatic HTTPS (Let's Encrypt) for {$DOMAIN}. Caddy forwards X-Forwarded-For to the app.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8000
+	log {
+		output stdout
+		# Do not log query strings (they can contain postcodes/age).
+		format filter {
+			wrap console
+			fields {
+				request>uri query {
+					delete
+				}
+				request>headers>Cookie delete
+			}
+		}
+	}
+}

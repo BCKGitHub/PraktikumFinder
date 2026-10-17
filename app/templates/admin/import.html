@@ -1,0 +1,23 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block admin %}
+<h1>Import &amp; Export</h1>
+<section class="card">
+  <h2>Export</h2>
+  <p><a class="btn" href="/admin/export.csv">Alle Angebote als CSV herunterladen</a></p>
+</section>
+<section class="card">
+  <h2>CSV-Import</h2>
+  <p class="small">Trennzeichen „;“ oder „,“, UTF-8. Importierte Angebote landen als <strong>Entwurf</strong> und müssen geprüft und veröffentlicht werden. Mehrere Werte mit „|“ trennen; Zeiträume als <code>2026-11-02/2026-11-13</code>; Bereiche als Kürzel (z. B. <code>it-software|softwareentwicklung</code>).</p>
+  <p class="small">Spalten: <code>{{ fields|join(";") }}</code> (<code>id</code>, <code>status</code> und Prüfspalten werden beim Import ignoriert).</p>
+  <form method="post" action="/admin/import" enctype="multipart/form-data" class="inline-form">
+    {{ csrf() }}
+    <input type="file" name="file" accept=".csv,text/csv" required>
+    <button class="btn btn-primary" type="submit">Importieren</button>
+  </form>
+  {% if result %}
+  <p class="alert alert-info">{{ result.created }} Angebote als Entwurf angelegt.</p>
+  {% if result.errors %}<ul class="small">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% endif %}
+</section>
+{% endblock %}

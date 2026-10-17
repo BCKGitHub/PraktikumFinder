@@ -1,0 +1,9 @@
+{% extends "admin/base_admin.html" %}
+{% block admin %}
+<h1>Einreichungen von Betrieben</h1>
+<nav class="tabs">{% for k, v in [("pending", "Offen"), ("approved", "Übernommen"), ("rejected", "Abgelehnt")] %}<a href="?status={{ k }}" {% if status == k %}aria-current="page"{% endif %}>{{ v }}</a>{% endfor %}</nav>
+<table class="table"><thead><tr><th>Eingang</th><th>Art</th><th>Betrieb</th><th>Titel</th></tr></thead><tbody>
+{% for s in items %}<tr><td>{{ s.created_at|fmt_date }}</td><td>{{ "Änderung" if s.kind == "update" else "Neu" }}</td><td>{{ s.payload.company_name }}</td><td><a href="/admin/einreichungen/{{ s.id }}">{{ s.payload.title }}</a></td></tr>
+{% else %}<tr><td colspan="4">Keine Einreichungen.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

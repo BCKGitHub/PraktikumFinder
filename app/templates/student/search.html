@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block title %}Suche{% endblock %}
+{% block content %}
+<h1>Praktikum suchen</h1>
+<p class="muted">Alle Angaben sind freiwillig. Je mehr du angibst, desto genauer können wir prüfen, ob ein Angebot passt. Wir speichern deine Angaben nicht.</p>
+{% include "student/_search_form.html" %}
+{% endblock %}

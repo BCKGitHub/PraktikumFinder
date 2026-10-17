@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Merkliste{% endblock %}
+{% block content %}
+<h1>Deine Merkliste</h1>
+<p class="muted small">Gespeichert nur in diesem Browser – ohne Konto. Wenn du die Browserdaten löschst, ist die Liste weg.</p>
+<div data-saved-list aria-live="polite">
+  <p class="loading">Wird geladen …</p>
+</div>
+<template id="saved-empty">
+  <section class="empty-state"><h2>Noch nichts gemerkt</h2><p>Tippe bei einem Angebot auf „☆ Merken“.</p><a class="btn btn-primary" href="/suche">Angebote suchen</a></section>
+</template>
+{% endblock %}

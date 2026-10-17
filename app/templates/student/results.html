@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import labels %}
+{% block title %}Ergebnisse{% endblock %}
+{% block content %}
+<h1>{{ results|length }} Angebot{{ "e" if results|length != 1 }} gefunden</h1>
+{% if errors %}
+<div class="alert alert-warn" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<p class="muted small">
+  Sortiert nach: passt zu dir → Termine → Weg → Bereich → zuletzt geprüft → Frist.
+  {% if school_place %}Weg geschätzt ab {{ school_place }}{% if query.home %} bzw. deinem Zuhause{% endif %}.{% endif %}
+  Wegzeiten sind grobe Schätzungen (Luftlinie), keine Fahrplanauskunft.
+</p>
+{% if rule and rule.note %}<p class="notice small"><strong>Regel {{ rule.name }}:</strong> {{ rule.note }}</p>{% endif %}
+
+<details class="card refine">
+  <summary>Suche anpassen</summary>
+  {% set preselected = [] %}
+  {% include "student/_search_form.html" %}
+</details>
+
+{% if results %}
+<ol class="results" role="list">
+  {% for m, o in results %}
+  <li class="result card">
+    <div class="result-head">
+      <h2 class="h3"><a href="/angebote/{{ o.id }}?{{ query_string }}">{{ o.title }}</a></h2>
+      <button type="button" class="btn-save" data-save="{{ o.id }}" aria-pressed="false" aria-label="Merken: {{ o.title }}">☆ Merken</button>
+    </div>
+    <p class="employer">{{ o.employer.name }} · {{ o.location_label or o.city_name or "Ort nicht angegeben" }}</p>
+    {{ labels(m) }}
+    <p class="small match-why">{{ m.primary_label.explanation }}</p>
+    <dl class="facts">
+      <div><dt>Weg</dt><dd>{% if m.travel %}ca. {{ m.travel.minutes }} Min.{% else %}<span class="missing">unbekannt</span>{% endif %}</dd></div>
+      <div><dt>Alter</dt><dd>{% if o.min_age and o.max_age %}{{ o.min_age }}–{{ o.max_age }}{% elif o.min_age %}ab {{ o.min_age }}{% elif o.max_age %}bis {{ o.max_age }}{% else %}<span class="missing">nicht angegeben</span>{% endif %}</dd></div>
+      <div><dt>Frist</dt><dd>{{ o.application_deadline|fmt_date if o.application_deadline else "keine angegeben" }}</dd></div>
+    </dl>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<section class="empty-state">
+  <h2>Leider nichts Passendes gefunden</h2>
+  <p>Probiere Folgendes:</p>
+  <ul>
+    <li>Wähle zusätzlich einen verwandten Bereich.</li>
+    <li>Erlaube einen etwas längeren Weg.</li>
+    <li>Lass das Datum leer und frag bei Betrieben mit flexiblen Terminen nach.</li>
+    <li>Frag deine Lehrkraft nach Betrieben, mit denen die Schule schon zusammenarbeitet.</li>
+  </ul>
+</section>
+{% endif %}
+
+{% if hidden_count %}
+<p class="notice">{{ hidden_count }} weitere{{ "s" if hidden_count == 1 }} Angebot{{ "e" if hidden_count != 1 }} ausgeblendet, weil Alter, Klasse, Termine oder Frist nicht passen.
+  <a href="/ergebnisse?{{ query_string }}&amp;alle=1">Trotzdem anzeigen</a></p>
+{% endif %}
+{% endblock %}

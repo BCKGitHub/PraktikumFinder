@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "partials/labels.html" import csrf with context %}
+{% block title %}Angebot melden{% endblock %}
+{% block content %}
+<h1>{% if target %}Änderung melden: {{ target.title }}{% else %}Schülerpraktikum melden{% endif %}</h1>
+<p class="muted">Felder mit * sind Pflicht. Alles andere hilft Schüler*innen bei der Entscheidung – unbekannte Angaben einfach leer lassen.</p>
+{% if errors %}<div class="alert alert-error" role="alert"><p>Bitte prüfen Sie:</p><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+<form method="post" action="/arbeitgeber/angebot-einreichen" class="card stacked">
+  {{ csrf() }}
+  {% if target %}<input type="hidden" name="target_id" value="{{ target.id }}">{% endif %}
+  <div class="hp" aria-hidden="true"><label>Bitte leer lassen <input type="text" name="website_url_confirm" tabindex="-1" autocomplete="off"></label></div>
+
+  <fieldset><legend>Betrieb</legend>
+    <label>Name des Betriebs * <input name="company_name" required maxlength="200" value="{{ data.company_name or (target.employer.name if target else '') }}"></label>
+    <label>Art <select name="employer_type"><option value="">– bitte wählen –</option>{% for t in EMPLOYER_TYPES %}<option {% if data.employer_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label>Kurzbeschreibung <textarea name="company_description" rows="2" maxlength="2000">{{ data.company_description or "" }}</textarea></label>
+    <label>Webseite <input type="url" name="website" maxlength="500" placeholder="https://" value="{{ data.website or '' }}"></label>
+  </fieldset>
+
+  <fieldset><legend>Ansprechperson (für Rückfragen)</legend>
+    <label>Name <input name="contact_name" maxlength="120" value="{{ data.contact_name or '' }}"></label>
+    <label>E-Mail * <input type="email" name="contact_email" required maxlength="200" value="{{ data.contact_email or '' }}"></label>
+    <label>Telefon <input type="tel" name="contact_phone" maxlength="60" value="{{ data.contact_phone or '' }}"></label>
+    <label class="check"><input type="checkbox" name="contact_publish" value="1" {% if data.contact_publish %}checked{% endif %}> Name der Ansprechperson darf im Angebot angezeigt werden</label>
+  </fieldset>
+
+  <fieldset><legend>Praktikum</legend>
+    <label>Titel * <input name="title" required maxlength="250" placeholder="z. B. Schülerpraktikum in der Kfz-Werkstatt" value="{{ data.title or (target.title if target else '') }}"></label>
+    <label>Was machen Praktikant*innen? <textarea name="description" rows="4" maxlength="5000">{{ data.description or "" }}</textarea></label>
+    <div class="check-grid"><span class="label-text">Bereiche *</span>
+      {% for d in domains %}
+        <label class="check"><input type="checkbox" name="domains" value="{{ d.slug }}" {% if d.slug in (data.domains or []) %}checked{% endif %}> {{ d.name }}</label>
+        {% for c in d.children %}<label class="check sub"><input type="checkbox" name="domains" value="{{ c.slug }}" {% if c.slug in (data.domains or []) %}checked{% endif %}> {{ c.name }}</label>{% endfor %}
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset class="grid-2"><legend>Ort</legend>
+    <label class="span-2">Straße und Hausnummer <input name="street" maxlength="200" value="{{ data.street or '' }}"></label>
+    <label>PLZ * <input name="postcode" required pattern="[0-9]{5}" maxlength="5" inputmode="numeric" value="{{ data.postcode or '' }}"></label>
+    <label>Ort <input name="city" maxlength="120" value="{{ data.city or '' }}"></label>
+    <label class="span-2">Anfahrt mit Bus &amp; Bahn <input name="transit" maxlength="1000" placeholder="z. B. 5 Min. von Haltestelle X" value="{{ data.transit or '' }}"></label>
+  </fieldset>
+
+  <fieldset class="grid-2"><legend>Wer kann sich bewerben?</legend>
+    <label>Mindestalter <input type="number" name="min_age" min="10" max="25" value="{{ data.min_age or '' }}"></label>
+    <label>Höchstalter <input type="number" name="max_age" min="10" max="25" value="{{ data.max_age or '' }}"></label>
+    <label>Ab Klasse <input type="number" name="min_grade" min="5" max="13" value="{{ data.min_grade or '' }}"></label>
+    <label>Bis Klasse <input type="number" name="max_grade" min="5" max="13" value="{{ data.max_grade or '' }}"></label>
+    <div class="span-2 check-grid"><span class="label-text">Schulformen (leer = alle)</span>
+      {% for s in SCHOOL_TYPES %}<label class="check"><input type="checkbox" name="school_types" value="{{ s }}" {% if s in (data.school_types or []) %}checked{% endif %}> {{ s }}</label>{% endfor %}
+    </div>
+    <label>Pflichtpraktika der Schule möglich?
+      <select name="mandatory"><option value="">weiß nicht</option><option value="ja" {% if data.mandatory == true %}selected{% endif %}>ja</option><option value="nein" {% if data.mandatory == false %}selected{% endif %}>nein</option></select></label>
+    <label>Vereinbarung mit der Schule nötig?
+      <select name="school_agreement"><option value="">weiß nicht</option><option value="ja" {% if data.school_agreement == true %}selected{% endif %}>ja</option><option value="nein" {% if data.school_agreement == false %}selected{% endif %}>nein</option></select></label>
+    <label class="span-2">Sprachkenntnisse <input name="languages" maxlength="250" placeholder="z. B. Deutsch (Grundkenntnisse reichen)" value="{{ data.languages or '' }}"></label>
+  </fieldset>
+
+  <fieldset class="grid-2"><legend>Termine</legend>
+    <label>Zeitraum 1 von <input type="date" name="start1" value="{{ data.start1 or '' }}"></label>
+    <label>bis <input type="date" name="end1" value="{{ data.end1 or '' }}"></label>
+    <label>Zeitraum 2 von <input type="date" name="start2" value="{{ data.start2 or '' }}"></label>
+    <label>bis <input type="date" name="end2" value="{{ data.end2 or '' }}"></label>
+    <label class="check span-2"><input type="checkbox" name="flexible" value="1" {% if data.flexible %}checked{% endif %}> Termine nach Absprache möglich</label>
+    <label class="span-2">Hinweis zu Terminen <input name="flexible_note" maxlength="250" value="{{ data.flexible_note or '' }}"></label>
+    <label>Bewerbungsfrist <input type="date" name="deadline" value="{{ data.deadline or '' }}"></label>
+    <label>Anzahl Plätze <input type="number" name="places" min="0" max="999" value="{{ data.places if data.places is not none else '' }}"></label>
+  </fieldset>
+
+  <fieldset><legend>Bewerbung</legend>
+    <label>Bewerbungsweg <input name="application_method" maxlength="60" placeholder="z. B. E-Mail, Online-Formular" value="{{ data.application_method or '' }}"></label>
+    <label>Bewerbungs-E-Mail <input type="email" name="application_email" maxlength="200" value="{{ data.application_email or '' }}"></label>
+    <label>Link zur Bewerbung / Info-Seite <input type="url" name="official_url" maxlength="800" placeholder="https://" value="{{ data.official_url or '' }}"></label>
+    <label>Benötigte Unterlagen (eine pro Zeile) <textarea name="documents" rows="3" maxlength="2000" placeholder="Lebenslauf&#10;Anschreiben">{{ data.documents or "" }}</textarea></label>
+    <label>Kleidung / Sicherheit <textarea name="clothing" rows="2" maxlength="2000">{{ data.clothing or "" }}</textarea></label>
+    {% if target %}<label>Was hat sich geändert? <textarea name="update_note" rows="2" maxlength="2000">{{ data.update_note or "" }}</textarea></label>{% endif %}
+  </fieldset>
+
+  <label class="check"><input type="checkbox" name="consent" value="1" required> Ich habe die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen. Meine Kontaktdaten werden zur Bearbeitung dieser Meldung gespeichert. *</label>
+  <button type="submit" class="btn btn-primary btn-lg">Angebot zur Prüfung senden</button>
+</form>
+{% endblock %}
