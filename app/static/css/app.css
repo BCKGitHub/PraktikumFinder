@@ -198,7 +198,7 @@ body.admin .wrap { max-width: 1280px; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .stat { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-decoration: none; color: var(--text); }
 .stat-n { font-size: 1.6rem; font-weight: 700; }
-.todo strong.warn { color: var(--bad); }
+.todo strong.warn, .status-panel strong.warn { color: var(--bad); }
 .row-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .filters input, .filters select { width: auto; flex: 1 1 160px; }

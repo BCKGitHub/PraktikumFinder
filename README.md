@@ -4,7 +4,7 @@ A locally hosted web app that helps students in Germany (mainly grades 8–10) f
 
 The UI is in German first. Search works without an account, and the server stores no personal data about students.
 
-> **Status: MVP.** Demo listings are fictional and marked as such. Before a public launch, have the privacy policy, terms and any legal statements reviewed by a qualified person. See `docs/PLAN.md` for the full plan, risks and backlog.
+> **Status: MVP.** The app starts without listings; real ones come from the import sources after an admin has reviewed them. **New here? Follow [docs/FIRST_IMPORT.md](docs/FIRST_IMPORT.md) for your first real import.** Before a public launch, have the privacy policy, terms and any legal statements reviewed by a qualified person. See `docs/PLAN.md` for the full plan, risks and backlog.
 
 ---
 
@@ -21,9 +21,11 @@ uvicorn app.main:app --reload
 
 Open <http://localhost:8000>. The first start creates `data/praktikumfinder.db` and loads:
 
-* 15 domains with subdomains, the Rhein-Main postcodes, the federal states and the travel rules,
-* 12 **fictional** demo listings (`SEED_DEMO_DATA=true`),
+* 15 domains with subdomains, the federal states and the travel rules,
+* about 9,100 **German postcodes** with coordinates (all of Germany, see [Travel time](#travel-time)),
 * 5 BA Jobsuche scrape sources, all **disabled** until an admin turns them on.
+
+No listings are created. To try the app with 12 **fictional** demo listings, set `SEED_DEMO_DATA=true` in `.env`; remove them later from the admin dashboard (**Demo-Angebote entfernen**) or with `python -m app.cli remove-demo`.
 
 ### Create an administrator
 
@@ -36,7 +38,7 @@ Log in at <http://localhost:8000/admin>. On first login you set up two-factor au
 ### Run the tests
 
 ```bash
-pytest -q          # 48 tests: matching/eligibility, scrapers, admin and security flows
+pytest -q          # matching/eligibility, text detection, scrapers, link checker, admin and security flows
 ruff check .
 ```
 
@@ -48,7 +50,7 @@ docker compose up --build
 docker compose exec app python -m app.cli create-admin you@example.org
 ```
 
-For production with automatic HTTPS (Caddy and Let's Encrypt), first point your domain's DNS at the server, then set these in `.env`: `APP_ENV=production`, `SECURE_COOKIES=true`, `SEED_DEMO_DATA=false`, `DOMAIN=your.domain`. Then run:
+For production with automatic HTTPS (Caddy and Let's Encrypt), first point your domain's DNS at the server, then set these in `.env`: `APP_ENV=production`, `SECURE_COOKIES=true`, `DOMAIN=your.domain` (and keep `SEED_DEMO_DATA=false`). Then run:
 
 ```bash
 docker compose --profile production up -d --build
@@ -67,6 +69,10 @@ Listings come from three channels. **Imported listings are never shown as verifi
 | **Bundesagentur für Arbeit Jobsuche** (`ba_jobsuche`) | The official public REST API behind arbeitsagentur.de/jobsuche (documented at <https://jobsuche.api.bund.dev/>), queried with `angebotsart=34` (Praktikum/Trainee) and the keyword "Schülerpraktikum" per city | Only results that mention *Schüler*, *Schulpraktikum*, *Schnupperpraktikum*, *Betriebspraktikum* or *Berufsorientierung* are kept, so internships for university students don't appear. Five sources are pre-configured (Frankfurt, Offenbach, Darmstadt, Mainz, Wiesbaden, 15 km radius) and **disabled**. Review the BA's terms of use before you enable them. |
 | **Employer career pages** (`jsonld_jobposting`) | Reads schema.org `JobPosting` data (JSON-LD), which employers publish so that job search engines can read it | Fetches **only URLs that an admin explicitly adds** (an allow-list). No free crawling. |
 | Employer submissions and CSV import | Form at `/arbeitgeber/angebot-einreichen`; CSV upload in the admin area | Reviewed before publication. |
+
+**Reading the ad text.** Imported ads often state age, grade and dates only in the text. `app/extract.py` reads common German phrasings ("ab 14 Jahren", "Klassen 8 bis 10", "9./10. Klasse", "vom 02.02.2027 bis 13.02.2027", "Bewerbungsschluss: 15.12.2026", the email address and requested documents such as Lebenslauf or Zeugnis). It only fills **empty** fields, never guesses, and writes what it found into the listing's notes ("Automatisch aus dem Anzeigentext erkannt – bitte prüfen: …"). The listing stays in review. For the BA source, the description text comes from its job-details endpoint (`"fetch_details": true`, the default); if that endpoint doesn't answer, the run continues without it. Admins can apply the same detection to any listing with **Alter, Klasse und Termine aus dem Text erkennen**.
+
+**Dead-link checker.** `app/linkcheck.py` checks the official link of every published or to-be-reviewed listing once a week (on the schedule, with **Alle Links jetzt prüfen** on the dashboard, per listing, or `python -m app.cli check-links`). Only 404 and 410 count as broken; these appear in the queue **Prüfung → Link defekt**. Sites that block bots, robots.txt refusals, network errors and server errors are shown as "nicht prüfbar", never as broken. Nothing is unpublished automatically.
 
 Rules every scraper follows (`app/scrapers/base.py`):
 
@@ -106,9 +112,12 @@ dashboard with to-do queues; listing create, edit, status workflow, verification
 
 No external routing service is called, so no location data leaves the server. The app takes the straight-line distance between postcode centroids and converts it to minutes with per-mode profiles: `minutes = overhead + km × detour ÷ speed`. Admins can change the profiles under **Orte & Regeln**. The result is always labelled as a rough estimate.
 
-The bundled postcodes cover the Rhein-Main launch region and are hand-entered approximations (about 1–2 km accuracy). To cover all of Germany, import a postcode-centroid CSV, for example one derived from OpenStreetMap or OpenGeoDB (columns `plz;ort;bundesland;lat;lon`):
+On first start the app loads `app/seed_data/postcodes_de.csv.gz`: one centroid per German postcode (about 9,100), built from [GeoNames](https://www.geonames.org/) data (**CC BY 4.0**; the attribution is on the terms page) with `scripts/build_postcodes.py`. Postcodes for large customers (companies, banks, authorities) are left out. Postcodes that already exist, such as the hand-entered Rhein-Main ones or ones an admin edited, are kept. Set `LOAD_GERMANY_POSTCODES=false` to skip this.
+
+To replace the hand-entered Rhein-Main values with the GeoNames ones, or to import your own CSV (columns `plz;ort;bundesland;lat;lon`, `bundesland` as code or name, `.csv` or `.csv.gz`):
 
 ```bash
+python -m app.cli import-postcodes --bundled
 python -m app.cli import-postcodes plz.csv
 ```
 
@@ -128,6 +137,9 @@ app/
   main.py            app factory, middleware, error pages, scheduler
   matching.py        eligibility, labels with reasons, ranking (pure, unit-tested)
   geo.py             distance and travel-time estimate, postcode lookup
+  postcodes.py       bundled Germany-wide postcodes, CSV import
+  extract.py         reads age, grade, dates, deadline, email, documents from German ad text
+  linkcheck.py       polite dead-link checker
   listings.py        status workflow, validation, verification, expiry
   security.py        Argon2id, TOTP, sessions, CSRF, rate limits, headers
   appsupport.py      German email and cover-letter templates, checklists
@@ -135,8 +147,9 @@ app/
   routers/           public (students), employer, admin
   templates/ static/ German UI (server-rendered Jinja, small vanilla JS)
 alembic/             database migrations
-data/seed/           domains, locations and travel rules (configurable data, no hard-coded city logic)
+app/seed_data/       domains, locations, travel rules, Germany-wide postcodes (configurable data, no hard-coded city logic)
 docs/PLAN.md         product plan, architecture, GDPR checklist, threat model, backlog
+docs/FIRST_IMPORT.md step-by-step guide to the first real import
 scripts/             entrypoint, backup, restore
 tests/               pytest suite and fixtures
 ```

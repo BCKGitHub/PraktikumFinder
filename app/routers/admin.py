@@ -18,14 +18,17 @@ from sqlalchemy.orm import Session, selectinload
 from ..audit import audit
 from ..db import SessionLocal, get_db
 from ..geo import normalize_postcode
+from ..linkcheck import LINK_LABELS, check_links, check_one
 from ..listings import (
     STATUS_LABELS,
     VERIFICATION_LABELS,
     S,
     TransitionError,
     change_status,
+    delete_opportunity,
     publish_blockers,
     record_verification,
+    remove_demo,
     validate_opportunity,
 )
 from ..models import (
@@ -49,8 +52,8 @@ from ..models import (
     opportunity_domains,
     utcnow,
 )
-from ..scrapers import REGISTRY
-from ..scrapers.runner import run_source
+from ..scrapers import REGISTRY, PoliteFetcher
+from ..scrapers.runner import apply_extracted, run_source
 from ..security import (
     enforce_rate_limit,
     is_locked,
@@ -197,6 +200,8 @@ def verification_queues(db: Session) -> dict[str, tuple[str, list[Opportunity]]]
         "dates_past": ("Praktikumstermine vorbei", [o for o in live if o.date_windows and all(w.end_date < today for w in o.date_windows)]),
         "missing_age": ("Alter/Klasse fehlt", [o for o in live if o.min_age is None and o.min_grade is None]),
         "missing_dates": ("Termine fehlen", [o for o in live if not o.date_windows and not o.flexible_dates]),
+        "broken_link": ("Link defekt", db.scalars(select(Opportunity).where(
+            Opportunity.status.in_([S.published, S.awaiting_review]), Opportunity.link_status == "broken").options(*opts)).all()),
         "not_seen": ("Nicht mehr in der Quelle gefunden", [
             o for o in live if o.source.startswith("scraper:") and o.last_seen_in_source_at
             and o.last_seen_in_source_at.date() < today - timedelta(days=not_seen_days)]),
@@ -211,8 +216,9 @@ def dashboard(request: Request, admin: AdminUser = Depends(admin_user), db: Sess
     pending_subs = db.scalar(select(func.count(EmployerSubmission.id)).where(EmployerSubmission.status == "pending"))
     open_reports = db.scalar(select(func.count(Report.id)).where(Report.resolved_at.is_(None)))
     sources = db.scalars(select(ScrapeSource)).all()
+    demo_count = db.scalar(select(func.count(Opportunity.id)).where(Opportunity.is_demo.is_(True)))
     return render(request, "admin/dashboard.html", admin=admin, counts=counts, queues=queues,
-                  pending_subs=pending_subs, open_reports=open_reports, sources=sources)
+                  pending_subs=pending_subs, open_reports=open_reports, sources=sources, demo_count=demo_count)
 
 
 @router.get("/pruefung")
@@ -434,13 +440,15 @@ def opportunity_delete(opp_id: int, request: Request, confirm: str = Form(""),
     if confirm != "LÖSCHEN":
         return redirect(f"/admin/angebote/{opp.id}", "Zum Löschen bitte „LÖSCHEN“ eintippen.", request)
     audit(db, admin.email, "opportunity.delete", "opportunity", opp.id, title=opp.title)
-    for sub in db.scalars(select(EmployerSubmission).where(or_(
-            EmployerSubmission.target_opportunity_id == opp.id, EmployerSubmission.created_opportunity_id == opp.id))):
-        sub.target_opportunity_id = None if sub.target_opportunity_id == opp.id else sub.target_opportunity_id
-        sub.created_opportunity_id = None if sub.created_opportunity_id == opp.id else sub.created_opportunity_id
-    db.delete(opp)
+    delete_opportunity(db, opp)
     db.commit()
     return redirect("/admin/angebote", "Angebot gelöscht.", request)
+
+
+@router.post("/demo/entfernen", dependencies=[Depends(verify_csrf)])
+def demo_remove(request: Request, admin: AdminUser = Depends(admin_user), db: Session = Depends(get_db)):
+    n = remove_demo(db, admin.email)
+    return redirect("/admin", f"{n} Demo-Angebote entfernt." if n else "Es gibt keine Demo-Angebote.", request)
 
 
 # --------------------------------------------------------------------------
@@ -952,6 +960,44 @@ def source_run(source_id: int, request: Request, admin: AdminUser = Depends(admi
         raise HTTPException(404)
     threading.Thread(target=_run_in_background, args=(src.id, admin.email), daemon=True).start()
     return redirect("/admin/quellen", f"„{src.name}“ läuft im Hintergrund. Seite in einer Minute neu laden.", request)
+
+
+def _check_links_in_background(actor: str) -> None:
+    db = SessionLocal()
+    try:
+        check_links(db, actor=actor)
+    finally:
+        db.close()
+
+
+@router.post("/links-pruefen", dependencies=[Depends(verify_csrf)])
+def links_check(request: Request, admin: AdminUser = Depends(admin_user)):
+    threading.Thread(target=_check_links_in_background, args=(admin.email,), daemon=True).start()
+    return redirect("/admin/pruefung?queue=broken_link",
+                    "Die Links werden im Hintergrund geprüft. Seite in ein paar Minuten neu laden.", request)
+
+
+@router.post("/angebote/{opp_id}/link-pruefen", dependencies=[Depends(verify_csrf)])
+def opportunity_link_check(opp_id: int, request: Request, admin: AdminUser = Depends(admin_user),
+                           db: Session = Depends(get_db)):
+    opp = _get_opp(db, opp_id)
+    status = check_one(PoliteFetcher(), opp)
+    audit(db, admin.email, "opportunity.link_check", "opportunity", opp.id, result=status)
+    db.commit()
+    msg = "Kein Link hinterlegt." if status == "skipped" else f"{LINK_LABELS[status]}: {opp.link_check_note}"
+    return redirect(f"/admin/angebote/{opp.id}", msg, request)
+
+
+@router.post("/angebote/{opp_id}/erkennen", dependencies=[Depends(verify_csrf)])
+def opportunity_detect(opp_id: int, request: Request, admin: AdminUser = Depends(admin_user),
+                       db: Session = Depends(get_db)):
+    opp = _get_opp(db, opp_id)
+    filled = apply_extracted(opp, f"{opp.title}\n{opp.description or ''}")
+    audit(db, admin.email, "opportunity.detect", "opportunity", opp.id, filled=filled)
+    db.commit()
+    msg = ("Erkannt und eingetragen: " + "; ".join(filled) + ". Bitte prüfen.") if filled else \
+        "Im Text wurde nichts erkannt, das in leere Felder passt."
+    return redirect(f"/admin/angebote/{opp.id}", msg, request)
 
 
 # --------------------------------------------------------------------------

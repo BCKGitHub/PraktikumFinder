@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -69,7 +69,19 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    """Create tables if they don't exist (Alembic is used for later migrations)."""
+    """Create tables if they don't exist (Alembic is used for later migrations).
+
+    A database made by an older version without Alembic (local development) also gets
+    any new nullable columns added, so it keeps working after an update.
+    """
     from . import models  # noqa: F401  (register models)
 
-    Base.metadata.create_all(get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name not in have and col.nullable and col.server_default is None:
+                    conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(engine.dialect)}'))

@@ -1,21 +1,23 @@
 """Command-line tasks: python -m app.cli <command>
 
   create-admin EMAIL           create an administrator (prompts for password)
-  import-postcodes FILE.csv    import postcode centroids (columns: plz;ort;bundesland;lat;lon)
+  import-postcodes FILE.csv    import postcode centroids (columns: plz;ort;bundesland;lat;lon), .csv or .csv.gz
+  import-postcodes --bundled   re-import the bundled Germany-wide postcodes, overwriting existing ones
   run-scrapers                 run all enabled scrape sources once
   expire                       mark outdated listings as expired
   seed-demo                    insert fictional demo listings
+  remove-demo                  delete all fictional demo listings
+  check-links                  check whether the links of published listings still work
 """
 from __future__ import annotations
 
-import csv
 import getpass
 import sys
 
 from sqlalchemy import select
 
 from .db import SessionLocal, init_db
-from .models import AdminUser, City, FederalState, Postcode
+from .models import AdminUser
 from .seed import seed_demo, seed_reference
 
 
@@ -37,37 +39,13 @@ def create_admin(email: str) -> None:
 
 
 def import_postcodes(path: str) -> None:
+    from .postcodes import BUNDLED, import_file
+
     db = SessionLocal()
-    states = {s.code: s for s in db.scalars(select(FederalState))}
-    states.update({s.name: s for s in states.values()})
-    n = 0
-    with open(path, encoding="utf-8-sig", newline="") as fh:
-        sample = fh.read(2048)
-        fh.seek(0)
-        reader = csv.DictReader(fh, delimiter=";" if ";" in sample else ",")
-        for row in reader:
-            code = (row.get("plz") or "").strip()
-            st = states.get((row.get("bundesland") or "").strip())
-            try:
-                lat, lon = float(row["lat"]), float(row["lon"])
-            except (KeyError, ValueError):
-                continue
-            if len(code) != 5 or not code.isdigit() or st is None:
-                continue
-            name = (row.get("ort") or "").strip()[:120]
-            city = db.scalar(select(City).where(City.name == name, City.state_id == st.id))
-            if city is None:
-                city = City(name=name, state_id=st.id)
-                db.add(city)
-                db.flush()
-            pc = db.scalar(select(Postcode).where(Postcode.code == code))
-            if pc is None:
-                db.add(Postcode(code=code, city_id=city.id, latitude=lat, longitude=lon))
-            else:
-                pc.city_id, pc.latitude, pc.longitude = city.id, lat, lon
-            n += 1
-    db.commit()
-    db.close()
+    try:
+        n = import_file(db, BUNDLED if path == "--bundled" else path)
+    finally:
+        db.close()
     print(f"{n} Postleitzahlen importiert/aktualisiert.")
 
 
@@ -96,6 +74,19 @@ def main(argv: list[str]) -> None:
         db = SessionLocal()
         print(f"{expire_outdated(db, actor='cli')} Angebote abgelaufen.")
         db.commit()
+        db.close()
+    elif cmd == "remove-demo":
+        from .listings import remove_demo
+
+        db = SessionLocal()
+        print(f"{remove_demo(db, actor='cli')} Demo-Angebote entfernt.")
+        db.close()
+    elif cmd == "check-links":
+        from .linkcheck import check_links
+
+        db = SessionLocal()
+        result = check_links(db)
+        print(f"{result.checked} Links geprüft: {result.ok} ok, {result.broken} defekt, {result.unknown} unklar.")
         db.close()
     elif cmd == "seed-demo":
         db = SessionLocal()

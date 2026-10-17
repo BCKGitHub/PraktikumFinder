@@ -11,6 +11,7 @@ os.environ["SCRAPER_MIN_DELAY_SECONDS"] = "0"
 def app_client(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/test.db")
     monkeypatch.setenv("SEED_DEMO_DATA", "true")
+    monkeypatch.setenv("LOAD_GERMANY_POSTCODES", "false")
     monkeypatch.setenv("SCRAPE_INTERVAL_HOURS", "0")
     from app import config, db
     from app.security import rate_limiter

@@ -30,7 +30,10 @@ class Settings:
     base_url: str = field(default_factory=lambda: os.getenv("BASE_URL", "http://localhost:8000"))
     # Cookies are only marked Secure when served over HTTPS.
     secure_cookies: bool = field(default_factory=lambda: _bool("SECURE_COOKIES", False))
-    seed_demo_data: bool = field(default_factory=lambda: _bool("SEED_DEMO_DATA", True))
+    # Fictional demo listings, for trying the app out. Off by default so only real listings appear.
+    seed_demo_data: bool = field(default_factory=lambda: _bool("SEED_DEMO_DATA", False))
+    # Load the bundled Germany-wide postcode centroids (GeoNames, CC BY 4.0) on first start.
+    load_germany_postcodes: bool = field(default_factory=lambda: _bool("LOAD_GERMANY_POSTCODES", True))
     # 0 disables the background scraper scheduler; admins can still run sources manually.
     scrape_interval_hours: float = field(
         default_factory=lambda: float(os.getenv("SCRAPE_INTERVAL_HOURS", "0"))

@@ -302,6 +302,11 @@ class Opportunity(Base):
     source_url: Mapped[str | None] = mapped_column(String(800))
     last_seen_in_source_at: Mapped[datetime | None] = mapped_column(DateTime)
 
+    # Result of the last dead-link check of official_url/source_url: ok | broken | unknown
+    link_status: Mapped[str | None] = mapped_column(String(20))
+    link_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    link_check_note: Mapped[str | None] = mapped_column(String(300))
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     published_at: Mapped[datetime | None] = mapped_column(DateTime)
