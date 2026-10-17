@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .config import get_settings
 from .db import SessionLocal, init_db
 from .listings import expire_outdated
+from .postcodes import load_bundled
 from .routers import admin, employer, public
 from .security import AdminRequired, SecurityHeadersMiddleware
 from .seed import seed_demo, seed_reference
@@ -35,6 +36,16 @@ def _housekeeping() -> None:
         db.close()
 
 
+def _link_check() -> None:
+    from .linkcheck import check_links
+
+    db = SessionLocal()
+    try:
+        check_links(db)
+    finally:
+        db.close()
+
+
 async def _scheduler(interval_hours: float) -> None:
     from .scrapers.runner import run_all_enabled
 
@@ -48,6 +59,7 @@ async def _scheduler(interval_hours: float) -> None:
                 db.close()
         await asyncio.to_thread(job)
         await asyncio.to_thread(_housekeeping)
+        await asyncio.to_thread(_link_check)
 
 
 @asynccontextmanager
@@ -59,6 +71,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_reference(db)
+        if settings.load_germany_postcodes:
+            n = load_bundled(db)
+            if n:
+                log.info("loaded %d postcodes for Germany", n)
         if settings.seed_demo_data:
             seed_demo(db)
     finally:

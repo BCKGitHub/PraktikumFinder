@@ -28,7 +28,8 @@ from .models import (
     VerificationRecord,
 )
 
-SEED_DIR = Path(__file__).resolve().parent.parent / "data" / "seed"
+# Kept inside the package: data/ is the runtime volume in Docker and would hide it.
+SEED_DIR = Path(__file__).resolve().parent / "seed_data"
 
 
 def seed_reference(db: Session) -> None:

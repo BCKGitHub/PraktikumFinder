@@ -11,6 +11,8 @@ from .audit import audit
 from .geo import Point
 from .matching import ListingFacts, MatchConfig, TravelRuleConfig
 from .models import (
+    Employer,
+    EmployerSubmission,
     FederalState,
     ListingStatus,
     Opportunity,
@@ -152,6 +154,31 @@ def expire_outdated(db: Session, today: date | None = None, actor: str = "system
             change_status(db, opp, S.expired, actor, note="automatisch abgelaufen")
             n += 1
     return n
+
+
+def delete_opportunity(db: Session, opp: Opportunity) -> None:
+    """Delete a listing and unlink employer submissions that point to it. The caller audits and commits."""
+    for sub in db.scalars(select(EmployerSubmission).where(or_(
+            EmployerSubmission.target_opportunity_id == opp.id, EmployerSubmission.created_opportunity_id == opp.id))):
+        sub.target_opportunity_id = None if sub.target_opportunity_id == opp.id else sub.target_opportunity_id
+        sub.created_opportunity_id = None if sub.created_opportunity_id == opp.id else sub.created_opportunity_id
+    db.delete(opp)
+
+
+def remove_demo(db: Session, actor: str) -> int:
+    """Delete all fictional demo listings and the demo employers that have no other listings."""
+    demo = db.scalars(select(Opportunity).where(Opportunity.is_demo.is_(True))).all()
+    employers = {o.employer_id for o in demo}
+    for opp in demo:
+        delete_opportunity(db, opp)
+    db.flush()
+    for emp in db.scalars(select(Employer).where(Employer.id.in_(employers))):
+        if not emp.opportunities:
+            db.delete(emp)
+    if demo:
+        audit(db, actor, "demo.remove", "opportunity", None, count=len(demo))
+    db.commit()
+    return len(demo)
 
 
 def public_query():

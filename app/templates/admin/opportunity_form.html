@@ -12,6 +12,11 @@
      {% if o.status in ("published", "expired", "closed") %} · <a href="/angebote/{{ o.id }}" target="_blank">Öffentliche Ansicht</a>{% endif %}</p>
   {% if blockers %}<p class="alert alert-warn small">Vor dem Veröffentlichen fehlt: {{ blockers|join(" ") }}</p>{% endif %}
   {% if o.data_quality_notes %}<p class="small">Hinweise: {{ o.data_quality_notes }}</p>{% endif %}
+  <p class="small">Link: {% if o.link_status == "broken" %}<strong class="warn">defekt</strong>{% elif o.link_status == "ok" %}funktioniert{% elif o.link_status == "unknown" %}nicht prüfbar{% else %}noch nicht geprüft{% endif %}{% if o.link_checked_at %} am {{ o.link_checked_at|fmt_date }}{% endif %}{% if o.link_check_note %} – {{ o.link_check_note }}{% endif %}</p>
+  <div class="inline-form">
+    <form method="post" action="/admin/angebote/{{ o.id }}/link-pruefen">{{ csrf() }}<button class="btn" type="submit">Link jetzt prüfen</button></form>
+    <form method="post" action="/admin/angebote/{{ o.id }}/erkennen">{{ csrf() }}<button class="btn" type="submit" title="Füllt nur leere Felder: Alter, Klasse, Termine, Frist, E-Mail, Unterlagen">Alter, Klasse und Termine aus dem Text erkennen</button></form>
+  </div>
   <form method="post" action="/admin/angebote/{{ o.id }}/status" class="inline-form">
     {{ csrf() }}
     <label>Status ändern

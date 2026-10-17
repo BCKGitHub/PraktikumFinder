@@ -237,7 +237,7 @@ def test_csv_export_and_import(admin_client, db_session):
 
 def test_admin_pages_render(admin_client):
     for url in ["/admin", "/admin/angebote", "/admin/angebote/neu", "/admin/angebote/1", "/admin/pruefung",
-                "/admin/pruefung?queue=stale", "/admin/einreichungen", "/admin/meldungen", "/admin/arbeitgeber",
+                "/admin/pruefung?queue=stale", "/admin/pruefung?queue=broken_link", "/admin/einreichungen", "/admin/meldungen", "/admin/arbeitgeber",
                 "/admin/arbeitgeber/1", "/admin/arbeitgeber/0", "/admin/bereiche", "/admin/bereiche?edit=1",
                 "/admin/orte", "/admin/quellen", "/admin/import", "/admin/statistik", "/admin/protokoll"]:
         r = admin_client.get(url)

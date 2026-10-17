@@ -95,6 +95,21 @@ class PoliteFetcher:
         parser = self._robots_for(url)
         return parser is None or parser.can_fetch(self.user_agent, url)
 
+    def status(self, url: str) -> tuple[int | None, str]:
+        """HTTP status of url after redirects, without reading the body. (None, reason) on network errors.
+
+        Raises RobotsDisallowed when robots.txt forbids the URL.
+        """
+        if not self.allowed(url):
+            raise RobotsDisallowed(f"robots.txt verbietet den Abruf von {url}")
+        self._wait(urlsplit(url).netloc)
+        try:
+            with self.client.stream("GET", url, headers={"User-Agent": self.user_agent,
+                                                         "Accept-Language": "de-DE,de;q=0.9"}) as r:
+                return r.status_code, str(r.url)
+        except httpx.HTTPError as exc:
+            return None, exc.__class__.__name__
+
     def get(self, url: str, params: dict | None = None, headers: dict | None = None,
             retries: int = 3) -> httpx.Response:
         full = str(httpx.URL(url, params=params)) if params else url

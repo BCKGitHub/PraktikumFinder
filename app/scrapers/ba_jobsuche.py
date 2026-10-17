@@ -7,16 +7,27 @@ terms of use before running this in production.
 
 Search parameters used: was (keywords), wo (place), umkreis (km),
 angebotsart (34 = Praktikum/Trainee), page, size.
+
+Search results carry no description text. With "fetch_details" (default on) the
+scraper also asks the job-details endpoint for each kept listing, so age, grade
+and dates can be read from the ad text. That endpoint is less well documented;
+if it fails twice in a row, the run carries on without details.
 """
 from __future__ import annotations
 
+import base64
+import logging
 from datetime import date
 
-from .base import ScrapedListing, Scraper
+from .base import RobotsDisallowed, ScrapedListing, ScrapeError, Scraper
+
+log = logging.getLogger(__name__)
 
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
 DETAIL_URL = "https://www.arbeitsagentur.de/jobsuche/jobdetail/{refnr}"
+DETAILS_API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobdetails/{key}"
 PUBLIC_CLIENT_ID = "jobboerse-jobsuche"
+DESCRIPTION_KEYS = ("stellenangebotsBeschreibung", "stellenbeschreibung", "beschreibung")
 
 # Only listings mentioning one of these are kept (case-insensitive), so general
 # university internships do not end up in a tool for 14-year-olds.
@@ -37,7 +48,7 @@ class BAJobsucheScraper(Scraper):
     label = "Bundesagentur für Arbeit – Jobsuche (offizielle API)"
     description = "Sucht Praktikumsangebote in der Jobbörse der Bundesagentur für Arbeit."
     config_help = ('{"was": "Schülerpraktikum", "wo": "Darmstadt", "umkreis": 15, "angebotsart": 34, '
-                   '"max_pages": 3, "required_keywords": ["schüler", "schulpraktikum"]}')
+                   '"max_pages": 3, "fetch_details": true, "required_keywords": ["schüler", "schulpraktikum"]}')
 
     def fetch(self, config: dict) -> list[ScrapedListing]:
         required = [k.lower() for k in config.get("required_keywords", DEFAULT_REQUIRED_KEYWORDS)]
@@ -68,7 +79,30 @@ class BAJobsucheScraper(Scraper):
             total = int(data.get("maxErgebnisse") or 0)
             if not items or page * size >= total:
                 break
+        if config.get("fetch_details", True):
+            self.add_details(out)
         return out
+
+    def add_details(self, listings: list[ScrapedListing]) -> None:
+        failures = 0
+        for listing in listings:
+            if failures >= 2:
+                log.info("BA job details unavailable, continuing without description text")
+                return
+            key = base64.b64encode(listing.external_id.encode()).decode()
+            try:
+                data = self.fetcher.get(DETAILS_API_URL.format(key=key),
+                                        headers={"X-API-Key": PUBLIC_CLIENT_ID, "Accept": "application/json"}).json()
+            except (ScrapeError, RobotsDisallowed, ValueError):
+                failures += 1
+                continue
+            failures = 0
+            text = next((data.get(k) for k in DESCRIPTION_KEYS if isinstance(data.get(k), str) and data.get(k).strip()), None)
+            if text:
+                listing.description = text.strip()[:20000]
+            email = (data.get("arbeitgeberdarstellung") or {}).get("email") if isinstance(data.get("arbeitgeberdarstellung"), dict) else None
+            if email and not listing.application_email:
+                listing.application_email = email
 
     @staticmethod
     def parse_item(item: dict) -> ScrapedListing | None:

@@ -1,6 +1,13 @@
 {% extends "admin/base_admin.html" %}
+{% from "partials/labels.html" import csrf with context %}
 {% block admin %}
 <h1>Übersicht</h1>
+{% if demo_count %}
+<div class="alert alert-info">
+  <p>Es gibt noch <strong>{{ demo_count }}</strong> fiktive Demo-Angebote. Entferne sie, bevor echte Schülerinnen und Schüler die Seite nutzen.</p>
+  <form method="post" action="/admin/demo/entfernen">{{ csrf() }}<button class="btn" type="submit">Demo-Angebote entfernen</button></form>
+</div>
+{% endif %}
 <div class="stat-grid">
   {% for s, n in counts.items() %}<a class="stat" href="/admin/angebote?status={{ s }}"><span class="stat-n">{{ n }}</span><span>{{ STATUS_LABELS[s] }}</span></a>{% endfor %}
 </div>
@@ -12,6 +19,8 @@
   <li><a href="/admin/pruefung?queue={{ key }}">{{ label }}</a>: <strong class="{{ 'warn' if items }}">{{ items|length }}</strong></li>
   {% endfor %}
 </ul>
+<form method="post" action="/admin/links-pruefen">{{ csrf() }}<button class="btn" type="submit">Alle Links jetzt prüfen</button>
+  <span class="small muted">Prüft, ob die Links der Angebote noch funktionieren (jede Woche erneut).</span></form>
 <h2>Quellen</h2>
 <ul>{% for s in sources %}<li>{{ s.name }} – {{ "aktiv" if s.enabled else "inaktiv" }}{% if s.last_status %} · {{ s.last_status }}{% endif %}</li>{% else %}<li>Keine Quellen.</li>{% endfor %}</ul>
 {% endblock %}

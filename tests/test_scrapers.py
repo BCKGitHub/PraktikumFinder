@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 
@@ -18,10 +19,20 @@ def make_fetcher(handler):
     return PoliteFetcher(client=client, min_delay=0, sleep=lambda s: None)
 
 
+BA_DETAIL_TEXT = ("Für Schülerinnen und Schüler ab 14 Jahren aus den Klassen 8 bis 10. Praktikum vom 01.02.2028 bis "
+                  "11.02.2028. Bewerbungsschluss: 10.12.2027. Bitte schicke Lebenslauf und Anschreiben an "
+                  "praktikum@buero-beispiel.de.")
+
+
 def ba_handler(request: httpx.Request):
     if request.url.path == "/robots.txt":
         return httpx.Response(404)
     assert request.headers["X-API-Key"] == "jobboerse-jobsuche"
+    if "/jobdetails/" in request.url.path:
+        refnr = base64.b64decode(request.url.path.rsplit("/", 1)[1]).decode()
+        if refnr == "10000-1111111111-S":
+            return httpx.Response(200, json={"refnr": refnr, "stellenangebotsBeschreibung": BA_DETAIL_TEXT})
+        return httpx.Response(404)
     assert request.url.params["angebotsart"] == "34"
     assert "PraktikumFinderBot" in request.headers["User-Agent"]
     return httpx.Response(200, json=json.loads((FIX / "ba_jobs_page1.json").read_text()))
@@ -121,3 +132,38 @@ def test_runner_auto_publish_only_with_domain_and_contact(db_session):
     for o in opps:
         if o.status == "published":
             assert o.domains and o.official_url and o.verification_status == "unverified"
+
+
+def test_ba_details_fill_age_grade_dates_and_documents(db_session):
+    from app.models import Opportunity, ScrapeSource
+    from app.scrapers.runner import DETECTED_NOTE, run_source
+
+    src = ScrapeSource(scraper="ba_jobsuche", name="Details", config={}, enabled=True)
+    db_session.add(src)
+    db_session.commit()
+    run = run_source(db_session, src, make_fetcher(ba_handler))
+    assert run.ok, run.message
+    office = db_session.scalar(select(Opportunity).where(Opportunity.external_id == "10000-1111111111-S"))
+    assert office.status == "awaiting_review"
+    assert (office.min_age, office.max_age, office.min_grade, office.max_grade) == (14, None, 8, 10)
+    assert [(w.start_date.isoformat(), w.end_date.isoformat()) for w in office.date_windows] == [("2028-02-01", "2028-02-11")]
+    assert office.flexible_dates is False
+    assert office.application_deadline.isoformat() == "2027-12-10"
+    assert office.application_email == "praktikum@buero-beispiel.de"
+    assert {d.name for d in office.documents} == {"Lebenslauf", "Anschreiben"}
+    assert DETECTED_NOTE in office.data_quality_notes
+    # Listings without detail text keep their fields empty instead of guessed values.
+    other = db_session.scalar(select(Opportunity).where(Opportunity.external_id == "10000-4444444444-S"))
+    assert other.min_age is None and other.min_grade is None and not other.date_windows
+    assert DETECTED_NOTE not in (other.data_quality_notes or "")
+
+
+def test_ba_details_can_be_switched_off():
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        return ba_handler(request)
+
+    BAJobsucheScraper(make_fetcher(handler)).fetch({"fetch_details": False})
+    assert not any("/jobdetails/" in p for p in seen)

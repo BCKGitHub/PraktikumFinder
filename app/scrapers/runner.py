@@ -3,15 +3,25 @@ from __future__ import annotations
 
 import logging
 import threading
-from datetime import timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..audit import audit
+from ..extract import extract
 from ..geo import lookup_postcode, normalize_postcode
 from ..listings import S
-from ..models import Domain, Employer, Opportunity, ScrapeRun, ScrapeSource, utcnow
+from ..models import (
+    Domain,
+    Employer,
+    Opportunity,
+    OpportunityDateWindow,
+    OpportunityDocument,
+    ScrapeRun,
+    ScrapeSource,
+    utcnow,
+)
 from . import REGISTRY, PoliteFetcher, ScrapedListing, ScrapeError
 
 log = logging.getLogger(__name__)
@@ -30,6 +40,10 @@ def suggest_domains(db: Session, text: str) -> list[Domain]:
     return [d for d in hits if d.id not in child_parent_ids][:4]
 
 
+def _ad_text(item: ScrapedListing) -> str:
+    return "\n".join(x for x in (item.title, item.description, item.extra_text) if x)
+
+
 def _employer(db: Session, name: str, item: ScrapedListing) -> Employer:
     emp = db.scalar(select(Employer).where(Employer.name == name))
     if emp is None:
@@ -38,6 +52,43 @@ def _employer(db: Session, name: str, item: ScrapedListing) -> Employer:
         db.add(emp)
         db.flush()
     return emp
+
+
+DETECTED_NOTE = "Automatisch aus dem Anzeigentext erkannt – bitte prüfen:"
+
+
+def apply_extracted(opp: Opportunity, text: str, today: date | None = None) -> list[str]:
+    """Fill empty fields from the ad text. Returns German one-liners of what was filled in."""
+    today = today or date.today()
+    ex = extract(text, today)
+    if opp.min_age is None and opp.max_age is None and (ex.min_age or ex.max_age):
+        opp.min_age, opp.max_age = ex.min_age, ex.max_age
+    if opp.min_grade is None and opp.max_grade is None and (ex.min_grade or ex.max_grade):
+        opp.min_grade, opp.max_grade = ex.min_grade, ex.max_grade
+    windows = [(a, b) for a, b in ex.windows if b >= today]
+    if not opp.date_windows and windows:
+        opp.date_windows = [OpportunityDateWindow(start_date=a, end_date=b) for a, b in windows]
+        opp.flexible_dates, opp.flexible_dates_note = False, None
+    else:
+        ex.windows = []
+    if opp.application_deadline is None and ex.deadline and ex.deadline >= today:
+        opp.application_deadline = ex.deadline
+    else:
+        ex.deadline = None
+    if not opp.application_email and ex.emails:
+        opp.application_email = ex.emails[0][:200]
+        opp.application_method = opp.application_method or "E-Mail"
+    else:
+        ex.emails = []
+    if not opp.documents and ex.documents:
+        opp.documents = [OpportunityDocument(name=d) for d in ex.documents]
+    else:
+        ex.documents = []
+    filled = ex.summary()
+    if filled:
+        note = f"{DETECTED_NOTE} " + "; ".join(filled) + "."
+        opp.data_quality_notes = f"{opp.data_quality_notes} {note}" if opp.data_quality_notes else note
+    return filled
 
 
 def upsert_listing(db: Session, source: ScrapeSource, item: ScrapedListing) -> str:
@@ -52,6 +103,8 @@ def upsert_listing(db: Session, source: ScrapeSource, item: ScrapedListing) -> s
             opp.title = item.title
             opp.description = item.description or opp.description
             opp.source_url = item.url
+            if DETECTED_NOTE not in (opp.data_quality_notes or ""):
+                apply_extracted(opp, _ad_text(item))
             return "updated"
         return "skipped"
 
@@ -93,6 +146,7 @@ def upsert_listing(db: Session, source: ScrapeSource, item: ScrapedListing) -> s
         last_seen_in_source_at=now,
     )
     opp.domains = suggest_domains(db, f"{item.title} {item.extra_text} {item.description or ''}")
+    apply_extracted(opp, _ad_text(item))
     if opp.status == S.published:
         if not opp.domains or not (opp.application_email or opp.official_url):
             opp.status = S.awaiting_review  # never publish without a domain and a contact route
