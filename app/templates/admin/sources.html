@@ -3,17 +3,19 @@
 {% block admin %}
 <h1>Quellen (automatischer Import)</h1>
 <p class="small">Importierte Angebote landen als „Wartet auf Prüfung“ und „Nicht bestätigt“. Es werden nur freigegebene Quellen abgerufen; robots.txt wird beachtet, Anfragen werden gedrosselt. Bitte vor dem Aktivieren die Nutzungsbedingungen der Quelle prüfen.</p>
-<dl class="small">{% for key, cls in registry.items() %}<dt><code>{{ key }}</code> – {{ cls.label }}</dt><dd>{{ cls.description }} Beispiel-Konfiguration: <code>{{ cls.config_help }}</code></dd>{% endfor %}</dl>
+<p class="small">Jede Stadt hat ihre eigene Quelle (eine Karte pro Stadt). Ganz unten kannst du eine neue Quelle anlegen, z. B. für eine weitere Stadt.</p>
+<dl class="small" translate="no">{% for key, cls in registry.items() %}<dt><code>{{ key }}</code> – {{ cls.label }}</dt><dd>{{ cls.description }} Beispiel-Konfiguration: <code>{{ cls.config_help }}</code></dd>{% endfor %}</dl>
 
 {% for s in sources + [none] %}
 <section class="card">
+{% if s %}<h2>{{ s.name }}</h2>{% else %}<h2>Neue Quelle anlegen</h2>{% endif %}
   <form method="post" action="/admin/quellen" class="stacked">
     {{ csrf() }}
     <input type="hidden" name="source_id" value="{{ s.id if s else '' }}">
     <div class="grid-2">
       <label>Name <input name="name" required value="{{ s.name if s else '' }}" placeholder="Neue Quelle"></label>
       <label>Scraper <select name="scraper">{% for key in registry %}<option {% if s and s.scraper == key %}selected{% endif %}>{{ key }}</option>{% endfor %}</select></label>
-      <label class="span-2">Konfiguration (JSON) <textarea name="config" rows="3" class="mono">{{ s.config|tojson if s else '{}' }}</textarea></label>
+      <label class="span-2">Konfiguration (JSON) <textarea name="config" rows="3" class="mono" translate="no">{{ s.config|tojson if s else '{}' }}</textarea></label>
       <label class="check"><input type="checkbox" name="enabled" value="1" {% if s and s.enabled %}checked{% endif %}> aktiv (für zeitgesteuerte Läufe)</label>
       <label class="check"><input type="checkbox" name="auto_publish_unverified" value="1" {% if s and s.auto_publish_unverified %}checked{% endif %}> direkt als „Nicht bestätigt“ veröffentlichen</label>
     </div>

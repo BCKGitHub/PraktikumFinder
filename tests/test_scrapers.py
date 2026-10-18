@@ -167,3 +167,31 @@ def test_ba_details_can_be_switched_off():
 
     BAJobsucheScraper(make_fetcher(handler)).fetch({"fetch_details": False})
     assert not any("/jobdetails/" in p for p in seen)
+
+
+def test_ba_scraper_reads_api_v6():
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        if "/jobdetails/" in request.url.path:
+            return httpx.Response(404)
+        assert request.url.path.endswith("/pc/v6/jobs")
+        return httpx.Response(200, json=json.loads((FIX / "ba_jobs_v6_page1.json").read_text()))
+
+    items = BAJobsucheScraper(make_fetcher(handler)).fetch({"wo": "Wiesbaden"})
+    assert [i.title for i in items] == ["Schülerpraktikum in der Tischlerei (m/w/d)"]  # university internship filtered
+    it = items[0]
+    assert it.external_id == "12336-a26f539j0448996-S"
+    assert it.employer_name == "Holzwerkstatt Beispiel GmbH"
+    assert (it.postcode, it.city, it.latitude, it.longitude) == ("65183", "Wiesbaden", 50.082, 8.24)
+    assert it.published.isoformat() == "2026-10-02"
+    assert it.url == "https://www.arbeitsagentur.de/jobsuche/jobdetail/12336-a26f539j0448996-S"
+
+
+def test_ba_v6_zero_hits_has_no_list():
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        return httpx.Response(200, json={"maxErgebnisse": 0, "facetten": {}})
+
+    assert BAJobsucheScraper(make_fetcher(handler)).fetch({}) == []
