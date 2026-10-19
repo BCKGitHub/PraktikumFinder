@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..audit import audit
 from ..db import SessionLocal, get_db
+from ..export_xlsx import build_workbook
 from ..geo import normalize_postcode
 from ..linkcheck import LINK_LABELS, check_links, check_one
 from ..listings import (
@@ -490,6 +491,18 @@ def export_csv(admin: AdminUser = Depends(admin_user), db: Session = Depends(get
     data = "﻿" + buf.getvalue()  # BOM so Excel opens umlauts correctly
     return StreamingResponse(iter([data]), media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": 'attachment; filename="praktikumfinder-angebote.csv"'})
+
+
+@router.get("/export.xlsx")
+def export_xlsx(admin: AdminUser = Depends(admin_user), db: Session = Depends(get_db)):
+    opps = db.scalars(select(Opportunity).options(selectinload(Opportunity.employer), selectinload(Opportunity.domains),
+                                                  selectinload(Opportunity.date_windows), selectinload(Opportunity.documents))).all()
+    data = build_workbook(opps)
+    audit(db, admin.email, "export.xlsx")
+    db.commit()
+    return StreamingResponse(iter([data]),
+                             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": 'attachment; filename="praktikumfinder-angebote.xlsx"'})
 
 
 @router.get("/import")
