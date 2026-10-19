@@ -89,6 +89,8 @@ If the line starts with **Fehler**:
 
 Do this for each listing. It's normal to reject quite a few: the BA search also finds internships that aren't meant for school students.
 
+**Tip:** under **Import & Export** click **Übersicht als Excel herunterladen** for a readable spreadsheet of all listings. It is sorted by employer and town, explains every column and flags what to check, for example ads whose expiry date has already passed.
+
 ## 6. Check what students see
 
 Open <http://localhost:8000> in a private browser window, search with your city's postcode, an age and a grade, and open one of your listings. Read it as a 14-year-old would.

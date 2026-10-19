@@ -235,6 +235,35 @@ def test_csv_export_and_import(admin_client, db_session):
     assert opp.status == "draft" and opp.date_windows
 
 
+def test_xlsx_export(admin_client):
+    from openpyxl import load_workbook
+    r = admin_client.get("/admin/export.xlsx")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/vnd.openxmlformats")
+    wb = load_workbook(io.BytesIO(r.content))
+    assert wb.sheetnames == ["Listings", "Full ad text", "What each column means"]
+    ws = wb["Listings"]
+    assert ws["A1"].value == "LISTING" and ws["B2"].value == "Employer" and ws.freeze_panes == "D3"
+    rows = [row for row in ws.iter_rows(min_row=3, values_only=True) if row[0] is not None]
+    assert rows and any("Schülerpraktikum in der Pflege" in (row[2] or "") for row in rows)
+    employers = [row[1].lower() for row in rows]
+    assert employers == sorted(employers)
+
+
+def test_xlsx_review_hints():
+    from datetime import date
+
+    from app.export_xlsx import age_text, grade_text, review_hints, short_employer
+    from app.models import Opportunity
+    o = Opportunity(title="x", description="Auch für Studierende", expires_at=date(2024, 4, 28), link_status="broken")
+    hints = review_hints(o, date(2026, 10, 19))
+    assert hints[0].startswith("Expiry date already passed")
+    assert "Link to the ad is broken" in hints and any("university" in h for h in hints)
+    assert age_text(14, None) == "14 or older" and age_text(None, None) == "not stated"
+    assert grade_text(8, 10) == "Class 8 to 10" and grade_text(9, 9) == "Class 9"
+    assert short_employer("dm-drogerie markt GmbH + Co. KG") == "dm-drogerie markt GmbH"
+
+
 def test_admin_pages_render(admin_client):
     for url in ["/admin", "/admin/angebote", "/admin/angebote/neu", "/admin/angebote/1", "/admin/pruefung",
                 "/admin/pruefung?queue=stale", "/admin/pruefung?queue=broken_link", "/admin/einreichungen", "/admin/meldungen", "/admin/arbeitgeber",
